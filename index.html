@@ -393,13 +393,14 @@
         let transformControls = null;
         let isCalibrating = false;
 
-        // 建立螢幕 Mesh 並直接加入至 scene 根目錄 (世界座標系)
+        // 建立螢幕 Mesh 並直接加入至 scene 根目錄 (世界座標系)[span_1](start_span)[span_1](end_span)
         const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
         const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
         screenMesh = new THREE.Mesh(screenGeo, screenMat);
-        screenMesh.position.set(0.481, -0.205, 0.453);
-        screenMesh.rotation.set(0.000, Math.PI / 2, 0.000); // 逆時針轉 90 度
-        screenMesh.scale.set(1.906, 1.861, 0.531);
+        // 套用您最新確認的數值[span_2](start_span)[span_2](end_span)
+        screenMesh.position.set(0.481, -0.260, 0.444);
+        screenMesh.rotation.set(0.007, 0.012, -0.000);
+        screenMesh.scale.set(1.906, 2.036, 0.531);
         scene.add(screenMesh);
 
         const loader = new THREE.GLTFLoader();
