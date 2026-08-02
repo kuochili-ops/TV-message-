@@ -438,10 +438,11 @@
             tvMesh.scale.multiplyScalar(1.8 / Math.max(size.x, size.y, size.z));
             scene.add(tvMesh);
 
-            const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
+            // 套用您剛剛校準好的數值
+            const screenGeo = new THREE.PlaneGeometry(0.242, 2.421);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0, 0.15, 0.45);
+            screenMesh.position.set(0.151, 3.121, -0.267);
             tvMesh.add(screenMesh);
         });
 
@@ -508,7 +509,6 @@
             
             const group = new THREE.Group();
             const sphereGeo = new THREE.SphereGeometry(0.1, 32, 32);
-            // depthTest: false 確保紅點永遠在最上層顯示，不會被電視模型遮擋
             const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444, depthTest: false });
             const sphere = new THREE.Mesh(sphereGeo, sphereMat);
             sphere.renderOrder = 999;
