@@ -3,15 +3,14 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>Retro TV 3D TransformControls Screen Calibration</title>
-    <!-- Google Chinese Font: Noto Sans TC -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
+    <title>Retro TV 3D Experience</title>
+    <!-- Google Fonts for selection -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&family=Orbitron:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Three.js, OrbitControls, TransformControls -->
+    <!-- Three.js, OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 
     <style>
         :root {
@@ -108,7 +107,7 @@
             overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 14px;
+            gap: 12px;
         }
 
         .control-group {
@@ -123,7 +122,7 @@
             color: var(--text-dim);
         }
 
-        input[type="text"] {
+        input[type="text"], select {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
@@ -133,151 +132,140 @@
             outline: none;
         }
 
-        .btn-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 10px;
+        select option {
+            background: #1e293b;
+            color: white;
+        }
+
+        .bottom-control-bar {
+            position: absolute;
+            bottom: 25px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 20;
+            display: flex;
+            gap: 15px;
+            background: rgba(18, 22, 33, 0.85);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
 
         .action-btn {
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             border: none;
-            border-radius: 8px;
-            padding: 12px;
+            border-radius: 20px;
+            padding: 10px 22px;
             color: white;
             font-weight: 600;
             font-size: 0.9rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
-            text-align: center;
+            transition: transform 0.1s ease;
+        }
+
+        .action-btn:active {
+            transform: scale(0.95);
         }
 
         .action-btn.off {
             background: linear-gradient(135deg, #ef4444, #b91c1c);
+            box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
-        .action-btn.success {
-            background: linear-gradient(135deg, #10b981, #059669);
+        /* CRT Screen Power Animation Overlay */
+        #power-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+            z-index: 100;
+            opacity: 0;
+            transition: opacity 0.15s ease;
         }
 
-        .action-btn.warning {
-            background: linear-gradient(135deg, #f59e0b, #d97706);
+        @keyframes powerOnFlash {
+            0% { transform: scale(1, 0.002); background: white; opacity: 1; }
+            50% { transform: scale(1.05, 1.05); background: white; opacity: 0.8; }
+            100% { transform: scale(1, 1); background: transparent; opacity: 0; }
         }
 
-        .calibration-box {
-            background: rgba(15, 23, 42, 0.95);
-            border: 1px solid #3b82f6;
-            border-radius: 12px;
-            padding: 14px;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+        @keyframes powerOffShrink {
+            0% { transform: scale(1, 1); background: transparent; opacity: 1; }
+            40% { transform: scale(1, 0.005); background: white; opacity: 1; }
+            100% { transform: scale(0.001, 0.0001); background: black; opacity: 1; }
         }
 
-        .mode-btn-pair {
-            display: flex;
-            gap: 6px;
+        .power-on-anim {
+            animation: powerOnFlash 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
         }
 
-        .mode-sub-btn {
-            flex: 1;
-            background: #1e293b;
-            border: 1px solid rgba(255,255,255,0.2);
-            color: #ccc;
-            padding: 8px;
-            font-size: 0.8rem;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: bold;
-            text-align: center;
-        }
-
-        .mode-sub-btn.active {
-            background: #3b82f6;
-            border-color: #3b82f6;
-            color: #fff;
-            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
+        .power-off-anim {
+            animation: powerOffShrink 0.5s cubic-bezier(0.5, 0, 1, 1) forwards;
         }
 
         #crtTextureCanvas {
             display: none;
-        }
-
-        .hud-instructions {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.75);
-            backdrop-filter: blur(8px);
-            padding: 10px 20px;
-            border-radius: 30px;
-            border: 1px solid rgba(255,255,255,0.15);
-            font-size: 0.85rem;
-            color: #60a5fa;
-            pointer-events: none;
-            z-index: 100;
-            text-align: center;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
     </style>
 </head>
 <body>
 
     <div id="webgl-container"></div>
+    <div id="power-overlay"></div>
     <canvas id="crtTextureCanvas" width="1024" height="768"></canvas>
 
+    <!-- Settings Panel (Position calibration hidden) -->
     <div class="ui-panel" id="movable-panel">
         <div class="panel-header" id="panel-drag-handle">
-            <span class="panel-title">📺 3D 電視螢幕精密定位</span>
+            <span class="panel-title">📺 復古電視設定選單</span>
             <button class="toggle-collapse-btn" id="btn-collapse">收合 [-]</button>
         </div>
         
         <div class="panel-content">
             <div class="control-group">
-                <label for="messageInput">電視顯示文字</label>
-                <input type="text" id="messageInput" value="正在顯示：復古電視 3D 模型">
+                <label for="messageInput">跑馬燈播放文字</label>
+                <input type="text" id="messageInput" value="★ 歡迎來到復古電視 3D 模擬世界！Enjoy the retro vibe! ★">
             </div>
 
-            <div class="btn-row">
-                <button class="action-btn" id="confirmBtn">開機預覽</button>
-                <button class="action-btn off" id="powerOffBtn">關機效果</button>
+            <div class="control-group">
+                <label for="fontSelect">選擇字型</label>
+                <select id="fontSelect">
+                    <option value="'Noto Sans TC', sans-serif">黑體 (Noto Sans TC)</option>
+                    <option value="'DotGothic16', sans-serif">像素字型 (DotGothic16)</option>
+                    <option value="'Orbitron', sans-serif">科技感字型 (Orbitron)</option>
+                </select>
             </div>
 
-            <!-- Calibration Section using TransformControls -->
-            <div class="calibration-box">
-                <h3 style="color: #60a5fa; font-size: 0.88rem; margin-bottom: 4px;">🎛️ 螢幕 3D 調整工具箱</h3>
-                <p style="font-size: 0.78rem; color: #94a3b8; line-height: 1.4;">
-                    點擊下方按鈕啟動控制框，直接用 3D 箭頭移動、旋轉或縮放螢幕至完美貼合！
-                </p>
-                
-                <div style="display: flex; gap: 8px; margin-top: 4px;">
-                    <button class="action-btn success" id="toggleCalibBtn" style="flex: 1; padding: 10px; font-size: 0.85rem;">🔧 開啟螢幕調整框</button>
-                </div>
+            <div class="control-group">
+                <label for="fontSizeSelect">字體大小</label>
+                <select id="fontSizeSelect">
+                    <option value="36">小 (36px)</option>
+                    <option value="52" selected>中 (52px)</option>
+                    <option value="72">大 (72px)</option>
+                </select>
+            </div>
 
-                <div id="transformModeBox" style="display: none; margin-top: 6px;" class="control-group">
-                    <label>操作模式：</label>
-                    <div class="mode-btn-pair">
-                        <button id="btn-mode-translate" class="mode-sub-btn active" onclick="setTransformMode('translate')">平移 (位置)</button>
-                        <button id="btn-mode-rotate" class="mode-sub-btn" onclick="setTransformMode('rotate')">旋轉 (角度)</button>
-                        <button id="btn-mode-scale" class="mode-sub-btn" onclick="setTransformMode('scale')">縮放 (大小)</button>
-                    </div>
-                </div>
-
-                <div id="calibResultContainer" style="display: none; margin-top: 4px;">
-                    <label style="font-size: 0.78rem; color: #34d399;">✅ 當前螢幕數值 (可複製)：</label>
-                    <input type="text" id="resultOutput" readonly style="font-size: 0.78rem; margin-top: 4px;">
-                    <button class="action-btn warning" id="copyResultBtn" style="width: 100%; margin-top: 6px; padding: 8px; font-size: 0.8rem;">📋 複製數值</button>
-                </div>
+            <div class="control-group">
+                <label for="speedSelect">跑馬燈速度</label>
+                <select id="speedSelect">
+                    <option value="1">慢速</option>
+                    <option value="2.5" selected>標準</option>
+                    <option value="5">快速</option>
+                </select>
             </div>
         </div>
     </div>
 
-    <div class="hud-instructions" id="hudInstruction">
-        💡 提示：點擊上方控制面板的「開啟螢幕調整框」即可直接在 3D 視角中拖曳調整螢幕。
+    <!-- Bottom Permanent Power Control Bar -->
+    <div class="bottom-control-bar">
+        <button class="action-btn" id="confirmBtn">▶ 開機</button>
+        <button class="action-btn off" id="powerOffBtn">電源關閉</button>
     </div>
 
     <script>
+        // Panel collapse logic
         const collapseBtn = document.getElementById('btn-collapse');
         const panel = document.getElementById('movable-panel');
         collapseBtn.addEventListener('click', () => {
@@ -285,6 +273,7 @@
             collapseBtn.innerText = panel.classList.contains('collapsed') ? "展開 [+]" : "收合 [-]";
         });
 
+        // Panel draggable handling
         const handle = document.getElementById('panel-drag-handle');
         let isDraggingPanel = false, startX, startY, initialLeft, initialTop;
         handle.addEventListener('mousedown', dragStart);
@@ -319,6 +308,61 @@
             document.removeEventListener('touchend', dragEnd);
         }
 
+        // Web Audio API for TV Static Noise Sound Effect
+        let audioCtx = null;
+        let noiseNode = null;
+        let noiseGain = null;
+
+        function initAudio() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+        }
+
+        function startNoiseSound() {
+            initAudio();
+            if (noiseNode) return;
+
+            const bufferSize = audioCtx.sampleRate * 2;
+            const buffer = audioCtx.createBuffer(1, bufferSize, audioCtx.sampleRate);
+            const data = buffer.getChannelData(0);
+            for (let i = 0; i < bufferSize; i++) {
+                data[i] = Math.random() * 2 - 1;
+            }
+
+            noiseNode = audioCtx.createBufferSource();
+            noiseNode.buffer = buffer;
+            noiseNode.loop = true;
+
+            const filter = audioCtx.createBiquadFilter();
+            filter.type = 'bandpass';
+            filter.frequency.value = 1200;
+            filter.Q.value = 0.8;
+
+            noiseGain = audioCtx.createGain();
+            noiseGain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+
+            noiseNode.connect(filter);
+            filter.connect(noiseGain);
+            noiseGain.connect(audioCtx.destination);
+
+            noiseNode.start();
+        }
+
+        function stopNoiseSound() {
+            if (noiseNode) {
+                try {
+                    noiseNode.stop();
+                    noiseNode.disconnect();
+                } catch(e) {}
+                noiseNode = null;
+            }
+        }
+
+        // Three.js setup
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0b0f19);
@@ -345,7 +389,8 @@
         const ctx = textCanvas.getContext('2d');
         const crtTexture = new THREE.CanvasTexture(textCanvas);
 
-        let tvState = 'noise';
+        let tvState = 'noise'; // 'noise' or 'running' or 'off'
+        let textXPos = textCanvas.width;
 
         function updateCRTTexture() {
             const w = textCanvas.width;
@@ -362,10 +407,10 @@
             ctx.fillStyle = '#111827';
             ctx.fillRect(0, 0, w, h);
 
-            if (tvState === 'noise' || tvState === 'booting') {
+            if (tvState === 'noise') {
                 const imgData = ctx.getImageData(0, 0, w, h);
                 const data = imgData.data;
-                const intensity = (tvState === 'noise') ? 220 : 100;
+                const intensity = 220;
                 for (let i = 0; i < data.length; i += 4) {
                     if (Math.random() < 0.4) {
                         const val = Math.random() * intensity;
@@ -377,12 +422,23 @@
                 ctx.putImageData(imgData, 0, 0);
             }
 
-            if (tvState === 'running' || tvState === 'booting') {
-                ctx.font = `bold 48px 'Noto Sans TC', sans-serif`;
-                ctx.textAlign = 'center';
+            if (tvState === 'running' || tvState === 'noise') {
+                const text = document.getElementById('messageInput').value;
+                const fontFamily = document.getElementById('fontSelect').value;
+                const fontSize = document.getElementById('fontSizeSelect').value;
+                const speed = parseFloat(document.getElementById('speedSelect').value);
+
+                ctx.font = `bold ${fontSize}px ${fontFamily}`;
                 ctx.textBaseline = 'middle';
-                ctx.fillStyle = '#cbd5e1';
-                ctx.fillText(document.getElementById('messageInput').value, w / 2, h / 2);
+                ctx.fillStyle = tvState === 'noise' ? 'rgba(203, 213, 225, 0.4)' : '#34d399';
+                
+                ctx.fillText(text, textXPos, h / 2);
+
+                textXPos -= speed * 2;
+                const textWidth = ctx.measureText(text).width;
+                if (textXPos < -textWidth) {
+                    textXPos = w;
+                }
             }
 
             crtTexture.needsUpdate = true;
@@ -390,14 +446,11 @@
 
         let tvMesh = null;
         let screenMesh = null;
-        let transformControls = null;
-        let isCalibrating = false;
 
-        // 建立螢幕 Mesh 並直接加入至 scene 根目錄 (世界座標系)[span_1](start_span)[span_1](end_span)
+        // Apply final confirmed locked values
         const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
         const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
         screenMesh = new THREE.Mesh(screenGeo, screenMat);
-        // 套用您最新確認的數值[span_2](start_span)[span_2](end_span)
         screenMesh.position.set(0.481, -0.260, 0.444);
         screenMesh.rotation.set(0.007, 0.012, -0.000);
         screenMesh.scale.set(1.906, 2.036, 0.531);
@@ -416,73 +469,34 @@
             scene.add(tvMesh);
         });
 
-        // TransformControls Setup
-        transformControls = new THREE.TransformControls(camera, renderer.domElement);
-        transformControls.size = 0.8;
-        scene.add(transformControls);
+        const overlay = document.getElementById('power-overlay');
 
-        transformControls.addEventListener('dragging-changed', (event) => {
-            controls.enabled = !event.value;
-        });
-
-        transformControls.addEventListener('change', () => {
-            if (screenMesh && isCalibrating) {
-                updateResultOutput();
-            }
-        });
-
-        window.setTransformMode = function(mode) {
-            transformControls.setMode(mode);
-            ['translate', 'rotate', 'scale'].forEach(m => {
-                document.getElementById(`btn-mode-${m}`).classList.toggle('active', m === mode);
-            });
-        };
-
-        const toggleCalibBtn = document.getElementById('toggleCalibBtn');
-        const transformModeBox = document.getElementById('transformModeBox');
-        const calibResultContainer = document.getElementById('calibResultContainer');
-        const hudInstruction = document.getElementById('hudInstruction');
-
-        toggleCalibBtn.addEventListener('click', () => {
-            isCalibrating = !isCalibrating;
-            if (isCalibrating) {
-                if (screenMesh) {
-                    transformControls.attach(screenMesh);
-                }
-                toggleCalibBtn.textContent = '🔒 完成並鎖定螢幕';
-                toggleCalibBtn.className = 'action-btn off';
-                transformModeBox.style.display = 'block';
-                calibResultContainer.style.display = 'block';
-                hudInstruction.textContent = '✨ 已解鎖螢幕 3D 調整框！請使用控制軸直接調整螢幕';
-                updateResultOutput();
-            } else {
-                transformControls.detach();
-                toggleCalibBtn.textContent = '🔧 開啟螢幕調整框';
-                toggleCalibBtn.className = 'action-btn success';
-                transformModeBox.style.display = 'none';
-                hudInstruction.textContent = '💡 提示：點擊上方控制面板的「開啟螢幕調整框」即可調整螢幕。';
-            }
-        });
-
-        function updateResultOutput() {
-            if (!screenMesh) return;
-            const p = screenMesh.position;
-            const r = screenMesh.rotation;
-            const s = screenMesh.scale;
-            const str = `screenMesh.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});\nscreenMesh.rotation.set(${r.x.toFixed(3)}, ${r.y.toFixed(3)}, ${r.z.toFixed(3)});\nscreenMesh.scale.set(${s.x.toFixed(3)}, ${s.y.toFixed(3)}, ${s.z.toFixed(3)});`;
-            document.getElementById('resultOutput').value = str;
+        function triggerPowerEffect(isTurningOn) {
+            overlay.className = '';
+            void overlay.offsetWidth;
+            overlay.className = isTurningOn ? 'power-on-anim' : 'power-off-anim';
         }
 
-        document.getElementById('copyResultBtn').addEventListener('click', () => {
-            const out = document.getElementById('resultOutput');
-            out.select();
-            navigator.clipboard.writeText(out.value);
-            document.getElementById('copyResultBtn').textContent = '✅ 已複製數值！';
-            setTimeout(() => { document.getElementById('copyResultBtn').textContent = '📋 複製數值'; }, 2000);
+        document.getElementById('confirmBtn').addEventListener('click', () => {
+            initAudio();
+            triggerPowerEffect(true);
+            tvState = 'running';
+            stopNoiseSound();
         });
 
-        document.getElementById('confirmBtn').addEventListener('click', () => { tvState = 'running'; });
-        document.getElementById('powerOffBtn').addEventListener('click', () => { tvState = 'off'; });
+        document.getElementById('powerOffBtn').addEventListener('click', () => {
+            triggerPowerEffect(false);
+            tvState = 'off';
+            stopNoiseSound();
+        });
+
+        window.addEventListener('pointerdown', () => {
+            if (tvState === 'noise') {
+                startNoiseSound();
+            }
+        }, { once: true });
+
+        startNoiseSound();
 
         function animate() {
             requestAnimationFrame(animate);
