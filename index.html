@@ -2,7 +2,7 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Retro TV 3D Interactive Touch Drag Calibration</title>
     <!-- Google Chinese Font: Noto Sans TC & DotGothic16 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
@@ -29,6 +29,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Noto Sans TC', sans-serif;
+            touch-action: none; /* 防止行動裝置預設捲動或縮放干擾 */
         }
 
         body {
@@ -75,6 +76,7 @@
 
         .interactive {
             pointer-events: auto;
+            touch-action: auto;
         }
 
         .toggle-panel-btn {
@@ -303,7 +305,7 @@
                 </div>
                 <div id="calibStep2Container" style="display: none;">
                     <p id="calibInstruction" style="font-size: 0.82rem; color: #cbd5e1;"></p>
-                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">請用手指/滑鼠直接拖曳紅點</div>
+                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">請用手指直接拖曳紅點</div>
                     <div class="calib-controls">
                         <button class="calib-btn" onclick="adjustPos('x', -0.01)">X -</button>
                         <button class="calib-btn" onclick="adjustPos('y', 0.01)">Y +</button>
@@ -444,7 +446,7 @@
             tvMesh.add(screenMesh);
         });
 
-        // 觸控拖曳紅點邏輯
+        // 觸控拖曳紅點邏輯 (使用 pointerdown / pointermove / pointerup 支援手機與滑鼠)
         window.addEventListener('pointerdown', (event) => {
             if (calibStep === 0 || !calibrationHelper) return;
             if (event.clientX < 420 && event.clientY < window.innerHeight - 50) return;
@@ -453,14 +455,17 @@
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(calibrationHelper);
+            // 檢查是否點到紅點（放大判定範圍）
+            const intersects = raycaster.intersectObject(calibrationHelper, true);
 
             if (intersects.length > 0) {
                 isDragging = true;
-                controls.enabled = false; // 拖曳紅點時暫停視角旋轉
+                controls.enabled = false; // 暫停 3D 旋轉
 
-                // 建立一個面向相機的平面供拖曳投射
-                dragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), calibrationHelper.position);
+                dragPlane.setFromNormalAndCoplanarPoint(
+                    camera.getWorldDirection(new THREE.Vector3()).negate(),
+                    calibrationHelper.position
+                );
             }
         });
 
@@ -481,7 +486,7 @@
         window.addEventListener('pointerup', () => {
             if (isDragging) {
                 isDragging = false;
-                controls.enabled = true; // 恢復視角控制
+                controls.enabled = true; // 恢復 3D 旋轉
             }
         });
 
@@ -499,11 +504,16 @@
             calibStep = 1;
             calibStep1Container.style.display = 'none';
             calibStep2Container.style.display = 'block';
-            calibInstruction.textContent = '步驟 1/2：請直接用手指【按住紅點拖曳】至螢幕左下角';
+            calibInstruction.textContent = '步驟 1/2：請用手指【按住紅色球體】直接拖曳至螢幕左下角';
             
-            const sphereGeo = new THREE.SphereGeometry(0.04, 16, 16);
+            // 建立較大的紅色球體與透明大判定範圍，確保手指輕鬆點到
+            const group = new THREE.Group();
+            const sphereGeo = new THREE.SphereGeometry(0.06, 32, 32);
             const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
-            calibrationHelper = new THREE.Mesh(sphereGeo, sphereMat);
+            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            group.add(sphere);
+
+            calibrationHelper = group;
             scene.add(calibrationHelper);
             calibrationHelper.position.set(0, 0, 1);
             updatePosDisplay();
@@ -525,7 +535,7 @@
             if (calibStep === 1) {
                 p1.copy(calibrationHelper.position);
                 calibStep = 2;
-                calibInstruction.textContent = '步驟 2/2：請直接用手指【按住紅點拖曳】至螢幕右上角';
+                calibInstruction.textContent = '步驟 2/2：請用手指【按住紅色球體】直接拖曳至螢幕右上角';
                 calibrationHelper.position.set(0.2, 0.2, 1);
                 updatePosDisplay();
             } else if (calibStep === 2) {
