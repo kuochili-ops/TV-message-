@@ -148,7 +148,7 @@
             background: rgba(18, 22, 33, 0.85);
             backdrop-filter: blur(12px);
             border: 1px solid var(--panel-border);
-            padding: 10px 20px;
+            padding: 10px 24px;
             border-radius: 30px;
             box-shadow: 0 10px 30px rgba(0,0,0,0.5);
         }
@@ -157,13 +157,15 @@
             background: linear-gradient(135deg, #3b82f6, #1d4ed8);
             border: none;
             border-radius: 20px;
-            padding: 10px 22px;
+            padding: 10px 28px;
             color: white;
             font-weight: 600;
-            font-size: 0.9rem;
+            font-size: 0.95rem;
             cursor: pointer;
             box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
             transition: transform 0.1s ease;
+            writing-mode: horizontal-tb;
+            text-align: center;
         }
 
         .action-btn:active {
@@ -175,36 +177,6 @@
             box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
-        /* CRT Screen Power Animation Overlay */
-        #power-overlay {
-            position: absolute;
-            inset: 0;
-            pointer-events: none;
-            z-index: 100;
-            opacity: 0;
-            transition: opacity 0.15s ease;
-        }
-
-        @keyframes powerOnFlash {
-            0% { transform: scale(1, 0.002); background: white; opacity: 1; }
-            50% { transform: scale(1.05, 1.05); background: white; opacity: 0.8; }
-            100% { transform: scale(1, 1); background: transparent; opacity: 0; }
-        }
-
-        @keyframes powerOffShrink {
-            0% { transform: scale(1, 1); background: transparent; opacity: 1; }
-            40% { transform: scale(1, 0.005); background: white; opacity: 1; }
-            100% { transform: scale(0.001, 0.0001); background: black; opacity: 1; }
-        }
-
-        .power-on-anim {
-            animation: powerOnFlash 0.6s cubic-bezier(0.25, 1, 0.5, 1) forwards;
-        }
-
-        .power-off-anim {
-            animation: powerOffShrink 0.5s cubic-bezier(0.5, 0, 1, 1) forwards;
-        }
-
         #crtTextureCanvas {
             display: none;
         }
@@ -213,10 +185,9 @@
 <body>
 
     <div id="webgl-container"></div>
-    <div id="power-overlay"></div>
     <canvas id="crtTextureCanvas" width="1024" height="768"></canvas>
 
-    <!-- Settings Panel (Position calibration hidden) -->
+    <!-- Settings Panel -->
     <div class="ui-panel" id="movable-panel">
         <div class="panel-header" id="panel-drag-handle">
             <span class="panel-title">📺 復古電視設定選單</span>
@@ -255,17 +226,25 @@
                     <option value="5">快速</option>
                 </select>
             </div>
+
+            <div class="control-group">
+                <label for="themeSelect">色調風格 (黑白灰階)</label>
+                <select id="themeSelect">
+                    <option value="retro">彩色復古綠</option>
+                    <option value="black">純黑風格</option>
+                    <option value="white">亮白風格</option>
+                    <option value="gray" selected>經典灰階</option>
+                </select>
+            </div>
         </div>
     </div>
 
-    <!-- Bottom Permanent Power Control Bar -->
+    <!-- Bottom Permanent Single Power Toggle Bar -->
     <div class="bottom-control-bar">
-        <button class="action-btn" id="confirmBtn">▶ 開機</button>
-        <button class="action-btn off" id="powerOffBtn">電源關閉</button>
+        <button class="action-btn off" id="powerToggleBtn">電源：關閉</button>
     </div>
 
     <script>
-        // Panel collapse logic
         const collapseBtn = document.getElementById('btn-collapse');
         const panel = document.getElementById('movable-panel');
         collapseBtn.addEventListener('click', () => {
@@ -273,7 +252,6 @@
             collapseBtn.innerText = panel.classList.contains('collapsed') ? "展開 [+]" : "收合 [-]";
         });
 
-        // Panel draggable handling
         const handle = document.getElementById('panel-drag-handle');
         let isDraggingPanel = false, startX, startY, initialLeft, initialTop;
         handle.addEventListener('mousedown', dragStart);
@@ -389,25 +367,65 @@
         const ctx = textCanvas.getContext('2d');
         const crtTexture = new THREE.CanvasTexture(textCanvas);
 
-        let tvState = 'noise'; // 'noise' or 'running' or 'off'
+        let powerState = false; 
+        let tvMode = 'off'; // 'off', 'booting', 'running'
+        let powerAnimProgress = 1.0; 
+        let isAnimatingPowerOff = false;
         let textXPos = textCanvas.width;
+
+        function getThemeColors() {
+            const theme = document.getElementById('themeSelect').value;
+            switch(theme) {
+                case 'black':
+                    return { bg: '#000000', text: '#ffffff', noiseTint: '#888888' };
+                case 'white':
+                    return { bg: '#ffffff', text: '#000000', noiseTint: '#cccccc' };
+                case 'gray':
+                    return { bg: '#1c1c1e', text: '#d1d1d6', noiseTint: '#8e8e93' };
+                case 'retro':
+                default:
+                    return { bg: '#111827', text: '#34d399', noiseTint: '#cbd5e1' };
+            }
+        }
 
         function updateCRTTexture() {
             const w = textCanvas.width;
             const h = textCanvas.height;
+            const colors = getThemeColors();
+
             ctx.clearRect(0, 0, w, h);
 
-            if (tvState === 'off') {
-                ctx.fillStyle = '#050505';
+            if (tvMode === 'off') {
+                ctx.fillStyle = '#030303';
                 ctx.fillRect(0, 0, w, h);
                 crtTexture.needsUpdate = true;
                 return;
             }
 
-            ctx.fillStyle = '#111827';
+            // TV screen-contained shutdown/startup line effect
+            if (isAnimatingPowerOff) {
+                powerAnimProgress -= 0.08;
+                if (powerAnimProgress <= 0) {
+                    isAnimatingPowerOff = false;
+                    tvMode = 'off';
+                    stopNoiseSound();
+                    powerAnimProgress = 1.0;
+                    crtTexture.needsUpdate = true;
+                    return;
+                }
+                ctx.fillStyle = colors.bg;
+                ctx.fillRect(0, 0, w, h);
+                ctx.fillStyle = '#ffffff';
+                const lineHeight = Math.max(2, h * powerAnimProgress);
+                ctx.fillRect(0, (h - lineHeight) / 2, w, lineHeight);
+                crtTexture.needsUpdate = true;
+                return;
+            }
+
+            ctx.fillStyle = colors.bg;
             ctx.fillRect(0, 0, w, h);
 
-            if (tvState === 'noise') {
+            if (tvMode === 'booting') {
                 const imgData = ctx.getImageData(0, 0, w, h);
                 const data = imgData.data;
                 const intensity = 220;
@@ -422,7 +440,7 @@
                 ctx.putImageData(imgData, 0, 0);
             }
 
-            if (tvState === 'running' || tvState === 'noise') {
+            if (tvMode === 'running') {
                 const text = document.getElementById('messageInput').value;
                 const fontFamily = document.getElementById('fontSelect').value;
                 const fontSize = document.getElementById('fontSizeSelect').value;
@@ -430,7 +448,7 @@
 
                 ctx.font = `bold ${fontSize}px ${fontFamily}`;
                 ctx.textBaseline = 'middle';
-                ctx.fillStyle = tvState === 'noise' ? 'rgba(203, 213, 225, 0.4)' : '#34d399';
+                ctx.fillStyle = colors.text;
                 
                 ctx.fillText(text, textXPos, h / 2);
 
@@ -447,7 +465,6 @@
         let tvMesh = null;
         let screenMesh = null;
 
-        // Apply final confirmed locked values
         const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
         const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
         screenMesh = new THREE.Mesh(screenGeo, screenMat);
@@ -469,34 +486,39 @@
             scene.add(tvMesh);
         });
 
-        const overlay = document.getElementById('power-overlay');
+        const powerToggleBtn = document.getElementById('powerToggleBtn');
 
-        function triggerPowerEffect(isTurningOn) {
-            overlay.className = '';
-            void overlay.offsetWidth;
-            overlay.className = isTurningOn ? 'power-on-anim' : 'power-off-anim';
-        }
-
-        document.getElementById('confirmBtn').addEventListener('click', () => {
+        powerToggleBtn.addEventListener('click', () => {
             initAudio();
-            triggerPowerEffect(true);
-            tvState = 'running';
-            stopNoiseSound();
-        });
+            powerState = !powerState;
 
-        document.getElementById('powerOffBtn').addEventListener('click', () => {
-            triggerPowerEffect(false);
-            tvState = 'off';
-            stopNoiseSound();
-        });
-
-        window.addEventListener('pointerdown', () => {
-            if (tvState === 'noise') {
+            if (powerState) {
+                // Turn On: 2 seconds booting noise, then switch to running
+                powerToggleBtn.textContent = '電源：開啟';
+                powerToggleBtn.className = 'action-btn';
+                tvMode = 'booting';
                 startNoiseSound();
-            }
-        }, { once: true });
+                isAnimatingPowerOff = false;
+                powerAnimProgress = 1.0;
 
-        startNoiseSound();
+                if (window.bootTimeout) clearTimeout(window.bootTimeout);
+                window.bootTimeout = setTimeout(() => {
+                    if (powerState && tvMode === 'booting') {
+                        tvMode = 'running';
+                        stopNoiseSound();
+                    }
+                }, 2000); // exactly 2 seconds of noise
+
+            } else {
+                // Turn Off: screen-contained shutdown effect
+                powerToggleBtn.textContent = '電源：關閉';
+                powerToggleBtn.className = 'action-btn off';
+                isAnimatingPowerOff = true;
+                powerAnimProgress = 1.0;
+                stopNoiseSound();
+                if (window.bootTimeout) clearTimeout(window.bootTimeout);
+            }
+        });
 
         function animate() {
             requestAnimationFrame(animate);
