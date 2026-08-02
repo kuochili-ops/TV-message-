@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro TV 3D Interactive Raycast Calibration</title>
+    <title>Retro TV 3D Interactive Touch Drag Calibration</title>
     <!-- Google Chinese Font: Noto Sans TC & DotGothic16 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
     
-    <!-- Three.js and OrbitControls for GLB model loading & touch/mouse manipulation -->
+    <!-- Three.js and OrbitControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
@@ -259,7 +259,7 @@
 
     <div class="ui-layer">
         <button class="toggle-panel-btn interactive" id="togglePanelBtn">
-            <span>⚙️ 點觸定位工具面板</span>
+            <span>⚙️ 觸控拖曳定位面板</span>
             <span id="toggleIcon">▲ 隱藏</span>
         </button>
 
@@ -297,13 +297,13 @@
 
             <!-- Calibration Section -->
             <div class="calibration-box">
-                <h3 style="color: #60a5fa; font-size: 0.9rem;">🎯 3D 點觸定位工具</h3>
+                <h3 style="color: #60a5fa; font-size: 0.9rem;">🎯 觸控拖曳定位工具</h3>
                 <div id="calibStep1Container">
-                    <button class="action-btn success" id="startCalibBtn">📍 開始點觸定位</button>
+                    <button class="action-btn success" id="startCalibBtn">📍 開始觸控拖曳定位</button>
                 </div>
                 <div id="calibStep2Container" style="display: none;">
                     <p id="calibInstruction" style="font-size: 0.82rem; color: #cbd5e1;"></p>
-                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">請點擊 3D 模型表面</div>
+                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">請用手指/滑鼠直接拖曳紅點</div>
                     <div class="calib-controls">
                         <button class="calib-btn" onclick="adjustPos('x', -0.01)">X -</button>
                         <button class="calib-btn" onclick="adjustPos('y', 0.01)">Y +</button>
@@ -324,7 +324,7 @@
     </div>
 
     <div class="hud-instructions">
-        💡 提示：滑鼠或手指可旋轉/縮放 3D 電視。
+        💡 提示：開啟定位後，可直接用手指按住紅點拖曳移動位置。
     </div>
 
     <script>
@@ -423,6 +423,8 @@
         let p2 = new THREE.Vector3();
         let raycaster = new THREE.Raycaster();
         let mouse = new THREE.Vector2();
+        let isDragging = false;
+        let dragPlane = new THREE.Plane();
 
         const loader = new THREE.GLTFLoader();
         loader.load('tv__old_tv__retro_tv.glb', function (gltf) {
@@ -442,20 +444,44 @@
             tvMesh.add(screenMesh);
         });
 
+        // 觸控拖曳紅點邏輯
         window.addEventListener('pointerdown', (event) => {
-            if (calibStep === 0 || !tvMesh) return;
+            if (calibStep === 0 || !calibrationHelper) return;
             if (event.clientX < 420 && event.clientY < window.innerHeight - 50) return;
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(tvMesh, true);
+            const intersects = raycaster.intersectObject(calibrationHelper);
 
             if (intersects.length > 0) {
-                const hitPoint = intersects[0].point;
-                calibrationHelper.position.copy(hitPoint);
+                isDragging = true;
+                controls.enabled = false; // 拖曳紅點時暫停視角旋轉
+
+                // 建立一個面向相機的平面供拖曳投射
+                dragPlane.setFromNormalAndCoplanarPoint(camera.getWorldDirection(new THREE.Vector3()).negate(), calibrationHelper.position);
+            }
+        });
+
+        window.addEventListener('pointermove', (event) => {
+            if (!isDragging || !calibrationHelper) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            let targetPos = new THREE.Vector3();
+            if (raycaster.ray.intersectPlane(dragPlane, targetPos)) {
+                calibrationHelper.position.copy(targetPos);
                 updatePosDisplay();
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (isDragging) {
+                isDragging = false;
+                controls.enabled = true; // 恢復視角控制
             }
         });
 
@@ -473,9 +499,9 @@
             calibStep = 1;
             calibStep1Container.style.display = 'none';
             calibStep2Container.style.display = 'block';
-            calibInstruction.textContent = '步驟 1/2：請直接在 3D 電視上【點擊螢幕左下角】';
+            calibInstruction.textContent = '步驟 1/2：請直接用手指【按住紅點拖曳】至螢幕左下角';
             
-            const sphereGeo = new THREE.SphereGeometry(0.03, 16, 16);
+            const sphereGeo = new THREE.SphereGeometry(0.04, 16, 16);
             const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
             calibrationHelper = new THREE.Mesh(sphereGeo, sphereMat);
             scene.add(calibrationHelper);
@@ -499,7 +525,7 @@
             if (calibStep === 1) {
                 p1.copy(calibrationHelper.position);
                 calibStep = 2;
-                calibInstruction.textContent = '步驟 2/2：請直接在 3D 電視上【點擊螢幕右上角】';
+                calibInstruction.textContent = '步驟 2/2：請直接用手指【按住紅點拖曳】至螢幕右上角';
                 calibrationHelper.position.set(0.2, 0.2, 1);
                 updatePosDisplay();
             } else if (calibStep === 2) {
