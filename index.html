@@ -404,17 +404,15 @@
             
             tvMesh.position.sub(center);
             tvMesh.scale.multiplyScalar(1.8 / Math.max(size.x, size.y, size.z));
-            
-            // 修正方位：將模型 Y 軸旋轉 -90 度（或 90 度），讓電視正面直接面向鏡頭
             tvMesh.rotation.y = -Math.PI / 2;
-
             scene.add(tvMesh);
 
-            // 建立螢幕 Mesh 並掛載到電視上
+            // 套用您最新輸入的定位與縮放數值
             const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0, 0.12, 0.43);
+            screenMesh.position.set(0.447, -0.236, 0.451);
+            screenMesh.scale.set(2.029, 1.883, 0.810);
             tvMesh.add(screenMesh);
         });
 
