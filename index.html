@@ -387,7 +387,6 @@
                 ctx.fillText(document.getElementById('messageInput').value, w / 2, h / 2);
             }
 
-            crtTexture.needsUpdate = true;
         }
 
         let tvMesh = null;
@@ -407,13 +406,13 @@
             tvMesh.rotation.y = -Math.PI / 2;
             scene.add(tvMesh);
 
-            // 建立螢幕 Mesh：初始賦予 Y 軸逆時針轉 90 度並向上對齊
+            // 套用您最新確認的數值
             const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.rotation.y = Math.PI / 2; // 逆時針轉 90 度
-            screenMesh.position.set(0.445, 0.15, 0.451); // 向上調整高度
-            screenMesh.scale.set(1.925, 2.022, 0.656);
+            screenMesh.position.set(0.481, -0.205, 0.453);
+            screenMesh.rotation.set(0.000, 0.000, 0.000);
+            screenMesh.scale.set(1.906, 1.861, 0.531);
             tvMesh.add(screenMesh);
         });
 
