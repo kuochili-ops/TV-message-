@@ -544,7 +544,7 @@
             crtTexture.needsUpdate = true;
         }
 
-        // --- Load GLB Model & Place Independent Screen ---
+        // --- Load GLB Model & Place Screen Correctly ---
         let tvMesh = null;
         const loader = new THREE.GLTFLoader();
         
@@ -564,13 +564,12 @@
 
                 scene.add(tvMesh);
 
-                // 精準在電視正面建立獨立的 CRT 螢幕面片，避免貼到外殼
-                const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
+                // 已修正座標：精準對齊到電視正面的螢幕凹槽位置
+                const screenGeo = new THREE.PlaneGeometry(0.85, 0.65);
                 const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture });
                 const screenMesh = new THREE.Mesh(screenGeo, screenMat);
                 
-                // 調整至電視正面的正確座標與深度
-                screenMesh.position.set(0, 0.05, 0.42);
+                screenMesh.position.set(0, 0.22, 0.45);
                 tvMesh.add(screenMesh);
             },
             undefined,
