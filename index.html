@@ -544,7 +544,7 @@
             crtTexture.needsUpdate = true;
         }
 
-        // --- Load GLB Model ---
+        // --- Load GLB Model & Place Independent Screen ---
         let tvMesh = null;
         const loader = new THREE.GLTFLoader();
         
@@ -564,17 +564,14 @@
 
                 scene.add(tvMesh);
 
-                tvMesh.traverse((child) => {
-                    if (child.isMesh) {
-                        const matName = child.material && child.material.name ? child.material.name.toLowerCase() : '';
-                        const meshName = child.name ? child.name.toLowerCase() : '';
-                        if (meshName.includes('screen') || meshName.includes('display') || matName.includes('screen') || matName.includes('display')) {
-                            child.material = new THREE.MeshBasicMaterial({ map: crtTexture });
-                        }
-                    }
-                });
-
-                setupScreenMaterial(tvMesh);
+                // 精準在電視正面建立獨立的 CRT 螢幕面片，避免貼到外殼
+                const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
+                const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture });
+                const screenMesh = new THREE.Mesh(screenGeo, screenMat);
+                
+                // 調整至電視正面的正確座標與深度
+                screenMesh.position.set(0, 0.05, 0.42);
+                tvMesh.add(screenMesh);
             },
             undefined,
             function (error) {
@@ -582,18 +579,6 @@
                 createFallbackTV();
             }
         );
-
-        function setupScreenMaterial(root) {
-            let foundScreen = false;
-            root.traverse((child) => {
-                if (child.isMesh && child.material) {
-                    if (!foundScreen) {
-                        child.material = new THREE.MeshBasicMaterial({ map: crtTexture });
-                        foundScreen = true;
-                    }
-                }
-            });
-        }
 
         function createFallbackTV() {
             const group = new THREE.Group();
