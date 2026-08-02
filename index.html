@@ -407,11 +407,12 @@
             tvMesh.rotation.y = -Math.PI / 2;
             scene.add(tvMesh);
 
-            // 套用您最新輸入的定位與縮放數值
+            // 建立螢幕 Mesh：初始賦予 Y 軸逆時針轉 90 度並向上對齊
             const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0.445, -0.232, 0.451);
+            screenMesh.rotation.y = Math.PI / 2; // 逆時針轉 90 度
+            screenMesh.position.set(0.445, 0.15, 0.451); // 向上調整高度
             screenMesh.scale.set(1.925, 2.022, 0.656);
             tvMesh.add(screenMesh);
         });
@@ -471,8 +472,9 @@
         function updateResultOutput() {
             if (!screenMesh) return;
             const p = screenMesh.position;
+            const r = screenMesh.rotation;
             const s = screenMesh.scale;
-            const str = `screenMesh.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});\nscreenMesh.scale.set(${s.x.toFixed(3)}, ${s.y.toFixed(3)}, ${s.z.toFixed(3)});`;
+            const str = `screenMesh.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});\nscreenMesh.rotation.set(${r.x.toFixed(3)}, ${r.y.toFixed(3)}, ${r.z.toFixed(3)});\nscreenMesh.scale.set(${s.x.toFixed(3)}, ${s.y.toFixed(3)}, ${s.z.toFixed(3)});`;
             document.getElementById('resultOutput').value = str;
         }
 
