@@ -35,7 +35,8 @@
 
 1. 確保本機或伺服器環境中包含以下資源檔案：
    * `index.html` (包含完整程式碼)
-   * `tv__old_tv__retro_tv.glb` (電視 3D 模型檔)
+   * `tv__old_tv__retro_tv.glb` (電視 3D 模型檔。tv glb 來源： "TV , Old TV , Retro TV" (https://skfb.ly/ozB6N) by Denys Hroshko is licensed under Creative Commons Attribution-NonCommercial (http://creativecommons.org/licenses/by-nc/4.0/).
+)
 2. 由於專案透過 `GLTFLoader` 載入 3D 模型，建議透過本地伺服器（例如 VS Code 的 **Live Server** 插件，或 Python 的 `http.server`）運行 `index.html`，以避免瀏覽器 CORS 跨域限制。
 
 ---
@@ -46,4 +47,3 @@
 * **縮放視構**：使用滑鼠滾輪（或雙指縮放）。
 * **電源切換**：點擊畫面下方的「電源：關閉 / 開啟」按鈕。
 * **調整參數**：點擊左上角「📺 復古電視設定選單」可隨時收合、展開，並即時調整字型、大小、縱高、速度與色調風格。
-* tv glb 來源： "TV , Old TV , Retro TV" (https://skfb.ly/ozB6N) by Denys Hroshko is licensed under Creative Commons Attribution-NonCommercial (http://creativecommons.org/licenses/by-nc/4.0/).
