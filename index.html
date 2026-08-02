@@ -285,7 +285,6 @@
             collapseBtn.innerText = panel.classList.contains('collapsed') ? "展開 [+]" : "收合 [-]";
         });
 
-        // Panel draggable handling
         const handle = document.getElementById('panel-drag-handle');
         let isDraggingPanel = false, startX, startY, initialLeft, initialTop;
         handle.addEventListener('mousedown', dragStart);
@@ -320,7 +319,6 @@
             document.removeEventListener('touchend', dragEnd);
         }
 
-        // Three.js setup
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0b0f19);
@@ -387,12 +385,22 @@
                 ctx.fillText(document.getElementById('messageInput').value, w / 2, h / 2);
             }
 
+            crtTexture.needsUpdate = true;
         }
 
         let tvMesh = null;
         let screenMesh = null;
         let transformControls = null;
         let isCalibrating = false;
+
+        // 建立螢幕 Mesh 並直接加入至 scene 根目錄 (世界座標系)
+        const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
+        const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
+        screenMesh = new THREE.Mesh(screenGeo, screenMat);
+        screenMesh.position.set(0.481, -0.205, 0.453);
+        screenMesh.rotation.set(0.000, Math.PI / 2, 0.000); // 逆時針轉 90 度
+        screenMesh.scale.set(1.906, 1.861, 0.531);
+        scene.add(screenMesh);
 
         const loader = new THREE.GLTFLoader();
         loader.load('tv__old_tv__retro_tv.glb', function (gltf) {
@@ -405,15 +413,6 @@
             tvMesh.scale.multiplyScalar(1.8 / Math.max(size.x, size.y, size.z));
             tvMesh.rotation.y = -Math.PI / 2;
             scene.add(tvMesh);
-
-            // 套用您最新確認的數值
-            const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
-            const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
-            screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0.481, -0.205, 0.453);
-            screenMesh.rotation.set(0.000, 0.000, 0.000);
-            screenMesh.scale.set(1.906, 1.861, 0.531);
-            tvMesh.add(screenMesh);
         });
 
         // TransformControls Setup
@@ -447,7 +446,6 @@
             isCalibrating = !isCalibrating;
             if (isCalibrating) {
                 if (screenMesh) {
-                    scene.attach(screenMesh);
                     transformControls.attach(screenMesh);
                 }
                 toggleCalibBtn.textContent = '🔒 完成並鎖定螢幕';
@@ -458,9 +456,6 @@
                 updateResultOutput();
             } else {
                 transformControls.detach();
-                if (tvMesh && screenMesh) {
-                    tvMesh.attach(screenMesh);
-                }
                 toggleCalibBtn.textContent = '🔧 開啟螢幕調整框';
                 toggleCalibBtn.className = 'action-btn success';
                 transformModeBox.style.display = 'none';
