@@ -445,11 +445,9 @@
             tvMesh.add(screenMesh);
         });
 
-        // 防止面板上的點擊穿透到畫布去旋轉相機
         configPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
         configPanel.addEventListener('touchstart', (e) => e.stopPropagation());
 
-        // 觸控拖曳紅點邏輯
         window.addEventListener('pointerdown', (event) => {
             if (calibStep === 0 || !calibrationHelper) return;
 
@@ -501,7 +499,6 @@
         const resultOutput = document.getElementById('resultOutput');
         const copyResultBtn = document.getElementById('copyResultBtn');
 
-        // 使用 pointerdown 確保手機點擊按鈕能立即反應
         startCalibBtn.addEventListener('pointerdown', (e) => {
             e.stopPropagation();
             calibStep = 1;
@@ -510,9 +507,11 @@
             calibInstruction.textContent = '步驟 1/2：請用手指【按住紅色球體】直接拖曳至螢幕左下角';
             
             const group = new THREE.Group();
-            const sphereGeo = new THREE.SphereGeometry(0.08, 32, 32);
-            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
+            const sphereGeo = new THREE.SphereGeometry(0.1, 32, 32);
+            // depthTest: false 確保紅點永遠在最上層顯示，不會被電視模型遮擋
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444, depthTest: false });
             const sphere = new THREE.Mesh(sphereGeo, sphereMat);
+            sphere.renderOrder = 999;
             group.add(sphere);
 
             calibrationHelper = group;
