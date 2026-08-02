@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro TV 3D Interactive Calibration Tool</title>
+    <title>Retro TV 3D Interactive Raycast Calibration</title>
     <!-- Google Chinese Font: Noto Sans TC & DotGothic16 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
     
@@ -200,26 +200,6 @@
             cursor: pointer;
         }
 
-        .radio-row {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .radio-label {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.88rem;
-            cursor: pointer;
-            color: var(--text-dim);
-        }
-
-        .radio-label input {
-            accent-color: var(--accent);
-            cursor: pointer;
-        }
-
         .btn-row {
             display: grid;
             grid-template-columns: 1fr 1fr;
@@ -329,7 +309,7 @@
 
     <div class="ui-layer">
         <button class="toggle-panel-btn interactive" id="togglePanelBtn">
-            <span>⚙️ 設定與定位面板</span>
+            <span>⚙️ 設定與點觸定位面板</span>
             <span id="toggleIcon">▲ 隱藏</span>
         </button>
 
@@ -367,25 +347,25 @@
 
             <!-- Calibration Section -->
             <div class="calibration-box">
-                <h3 id="calibTitle">📐 螢幕 3D 定位工具 (未啟動)</h3>
+                <h3 id="calibTitle">🎯 點觸 3D 定位工具</h3>
                 <div id="calibStep1Container">
-                    <button class="action-btn success" id="startCalibBtn">📍 開始螢幕定位 (雙點對齊)</button>
+                    <button class="action-btn success" id="startCalibBtn">📍 開始點觸定位 (雙點對齊)</button>
                 </div>
                 <div id="calibStep2Container" style="display: none;">
                     <p id="calibInstruction" style="font-size: 0.82rem; color: #cbd5e1;"></p>
-                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">座標: (0, 0, 0)</div>
+                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">點擊模型表面定位</div>
                     <div class="calib-controls">
-                        <button class="calib-btn" onclick="adjustPos('x', -0.01)">X -</button>
-                        <button class="calib-btn" onclick="adjustPos('y', 0.01)">Y +</button>
-                        <button class="calib-btn" onclick="adjustPos('x', 0.01)">X +</button>
-                        <button class="calib-btn" onclick="adjustPos('y', -0.01)">Y -</button>
-                        <button class="calib-btn" onclick="adjustPos('z', 0.01)">Z + (前)</button>
-                        <button class="calib-btn" onclick="adjustPos('z', -0.01)">Z - (後)</button>
+                        <button class="calib-btn" onclick="adjustPos('x', -0.005)">X -</button>
+                        <button class="calib-btn" onclick="adjustPos('y', 0.005)">Y +</button>
+                        <button class="calib-btn" onclick="adjustPos('x', 0.005)">X +</button>
+                        <button class="calib-btn" onclick="adjustPos('y', -0.005)">Y -</button>
+                        <button class="calib-btn" onclick="adjustPos('z', 0.005)">Z +</button>
+                        <button class="calib-btn" onclick="adjustPos('z', -0.005)">Z -</button>
                     </div>
                     <button class="action-btn" id="nextPointBtn" style="margin-top: 8px;">確定此點位置</button>
                 </div>
                 <div id="calibResultContainer" style="display: none;">
-                    <p style="font-size: 0.82rem; color: #34d399;">✅ 定位完成！請複製下方數值貼給 AI：</p>
+                    <p style="font-size: 0.82rem; color: #34d399;">✅ 雙點定位完成！請複製下方數值貼給 AI：</p>
                     <input type="text" id="resultOutput" readonly style="font-size: 0.8rem; margin-top: 4px;">
                     <button class="action-btn success" id="copyResultBtn" style="margin-top: 8px;">📋 複製定位數值</button>
                 </div>
@@ -460,14 +440,12 @@
         let tvState = 'noise';
         let textX = textCanvas.width;
         let noiseIntensity = 1.0;
-        let powerOffProgress = 0;
 
         let config = {
             text: messageInput.value,
             size: parseInt(textSizeRange.value),
             speed: parseInt(scrollSpeedRange.value),
-            fontFamily: fontSelect.value,
-            textColor: 'grayscale'
+            fontFamily: fontSelect.value
         };
 
         function updateCRTTexture() {
@@ -532,13 +510,15 @@
             crtTexture.needsUpdate = true;
         }
 
-        // --- Load GLB Model & Calibration Setup ---
+        // --- Load GLB Model & Interactive Raycasting Calibration ---
         let tvMesh = null;
         let screenMesh = null;
         let calibrationHelper = null;
         let calibStep = 0; // 0: off, 1: bottom-left, 2: top-right
         let p1 = new THREE.Vector3();
         let p2 = new THREE.Vector3();
+        let raycaster = new THREE.Raycaster();
+        let mouse = new THREE.Vector2();
 
         const loader = new THREE.GLTFLoader();
         loader.load('tv__old_tv__retro_tv.glb', function (gltf) {
@@ -552,7 +532,6 @@
             tvMesh.scale.multiplyScalar(1.8 / maxDim);
             scene.add(tvMesh);
 
-            // Initial screen mesh
             const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
@@ -570,7 +549,25 @@
             tvMesh = group;
         });
 
-        // Calibration UI Logic
+        // Click / Touch Raycast Event for 3D Positioning
+        window.addEventListener('pointerdown', (event) => {
+            if (calibStep === 0 || !tvMesh) return;
+            if (event.clientX < 420 && event.clientY < window.innerHeight - 50) return;
+
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+            raycaster.setFromCamera(mouse, camera);
+            const intersects = raycaster.intersectObject(tvMesh, true);
+
+            if (intersects.length > 0) {
+                const hitPoint = intersects[0].point;
+                tvMesh.worldToLocal(hitPoint);
+                calibrationHelper.position.copy(hitPoint);
+                updatePosDisplay();
+            }
+        });
+
         const startCalibBtn = document.getElementById('startCalibBtn');
         const calibStep1Container = document.getElementById('calibStep1Container');
         const calibStep2Container = document.getElementById('calibStep2Container');
@@ -585,14 +582,13 @@
             calibStep = 1;
             calibStep1Container.style.display = 'none';
             calibStep2Container.style.display = 'block';
-            calibInstruction.textContent = '步驟 1/2：請調整數值，將定位點移至【螢幕左下角】';
+            calibInstruction.textContent = '步驟 1/2：請直接在 3D 電視上【點擊/輕觸螢幕左下角】，或使用下方微調按鈕';
             
-            // Create Red Helper Sphere
-            const sphereGeo = new THREE.SphereGeometry(0.03, 16, 16);
-            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            const sphereGeo = new THREE.SphereGeometry(0.025, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
             calibrationHelper = new THREE.Mesh(sphereGeo, sphereMat);
             tvMesh.add(calibrationHelper);
-            calibrationHelper.position.set(0, 0, 0.5);
+            calibrationHelper.position.set(0, 0.15, 0.45);
             updatePosDisplay();
         });
 
@@ -605,21 +601,20 @@
         function updatePosDisplay() {
             if (!calibrationHelper) return;
             const p = calibrationHelper.position;
-            currentPosDisplay.textContent = `目前座標: X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)}, Z=${p.z.toFixed(3)}`;
+            currentPosDisplay.textContent = `定位點座標: X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)}, Z=${p.z.toFixed(3)}`;
         }
 
         nextPointBtn.addEventListener('click', () => {
             if (calibStep === 1) {
                 p1.copy(calibrationHelper.position);
                 calibStep = 2;
-                calibInstruction.textContent = '步驟 2/2：請調整數值，將定位點移至【螢幕右上角】';
-                calibrationHelper.position.set(0.2, 0.3, 0.5);
+                calibInstruction.textContent = '步驟 2/2：請直接在 3D 電視上【點擊/輕觸螢幕右上角】，或使用微調按鈕';
+                calibrationHelper.position.set(0.2, 0.3, 0.45);
                 updatePosDisplay();
             } else if (calibStep === 2) {
                 p2.copy(calibrationHelper.position);
                 tvMesh.remove(calibrationHelper);
                 
-                // Calculate center and size from p1 and p2
                 const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
                 const width = Math.abs(p2.x - p1.x);
                 const height = Math.abs(p2.y - p1.y);
@@ -661,10 +656,7 @@
         }
 
         confirmBtn.addEventListener('click', startBootSequence);
-        powerOffBtn.addEventListener('click', () => {
-            if (tvState === 'off') return;
-            tvState = 'off';
-        });
+        powerOffBtn.addEventListener('click', () => { tvState = 'off'; });
 
         startBootSequence();
 
