@@ -212,9 +212,21 @@
             <div class="control-group">
                 <label for="fontSizeSelect">字體大小</label>
                 <select id="fontSizeSelect">
-                    <option value="36">小 (36px)</option>
-                    <option value="52" selected>中 (52px)</option>
+                    <option value="52">中 (52px)</option>
                     <option value="72">大 (72px)</option>
+                    <option value="96">特大 (96px)</option>
+                    <option value="120">超大 (120px)</option>
+                    <option value="150">極大 (150px)</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label for="textHeightScale">字體縱高比例</label>
+                <select id="textHeightScale">
+                    <option value="0.7">壓扁 (0.7x)</option>
+                    <option value="1.0" selected>標準 (1.0x)</option>
+                    <option value="1.3">拉高 (1.3x)</option>
+                    <option value="1.6">超高 (1.6x)</option>
                 </select>
             </div>
 
@@ -368,7 +380,7 @@
         const crtTexture = new THREE.CanvasTexture(textCanvas);
 
         let powerState = false; 
-        let tvMode = 'off'; // 'off', 'booting', 'running'
+        let tvMode = 'off'; 
         let powerAnimProgress = 1.0; 
         let isAnimatingPowerOff = false;
         let textXPos = textCanvas.width;
@@ -402,7 +414,6 @@
                 return;
             }
 
-            // TV screen-contained shutdown/startup line effect
             if (isAnimatingPowerOff) {
                 powerAnimProgress -= 0.08;
                 if (powerAnimProgress <= 0) {
@@ -443,14 +454,21 @@
             if (tvMode === 'running') {
                 const text = document.getElementById('messageInput').value;
                 const fontFamily = document.getElementById('fontSelect').value;
-                const fontSize = document.getElementById('fontSizeSelect').value;
+                const fontSize = parseInt(document.getElementById('fontSizeSelect').value, 10);
+                const textHeightScale = parseFloat(document.getElementById('textHeightScale').value);
                 const speed = parseFloat(document.getElementById('speedSelect').value);
+
+                ctx.save();
+                ctx.translate(0, h / 2);
+                ctx.scale(1.0, textHeightScale);
+                ctx.translate(0, -h / 2);
 
                 ctx.font = `bold ${fontSize}px ${fontFamily}`;
                 ctx.textBaseline = 'middle';
                 ctx.fillStyle = colors.text;
                 
                 ctx.fillText(text, textXPos, h / 2);
+                ctx.restore();
 
                 textXPos -= speed * 2;
                 const textWidth = ctx.measureText(text).width;
@@ -493,7 +511,6 @@
             powerState = !powerState;
 
             if (powerState) {
-                // Turn On: 2 seconds booting noise, then switch to running
                 powerToggleBtn.textContent = '電源：開啟';
                 powerToggleBtn.className = 'action-btn';
                 tvMode = 'booting';
@@ -507,10 +524,9 @@
                         tvMode = 'running';
                         stopNoiseSound();
                     }
-                }, 2000); // exactly 2 seconds of noise
+                }, 2000);
 
             } else {
-                // Turn Off: screen-contained shutdown effect
                 powerToggleBtn.textContent = '電源：關閉';
                 powerToggleBtn.className = 'action-btn off';
                 isAnimatingPowerOff = true;
