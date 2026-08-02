@@ -406,12 +406,12 @@
             tvMesh.scale.multiplyScalar(1.8 / Math.max(size.x, size.y, size.z));
             scene.add(tvMesh);
 
-            // 套用您剛確認的定位與縮放數值
+            // 套用您最新輸入的定位與縮放數值
             const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0.922, -0.254, 0.000);
-            screenMesh.scale.set(1.801, 1.801, 1.801);
+            screenMesh.position.set(0.910, -0.247, -0.018);
+            screenMesh.scale.set(1.904, 2.303, 488901.797);
             tvMesh.add(screenMesh);
         });
 
