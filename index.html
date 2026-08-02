@@ -2,15 +2,16 @@
 <html lang="zh-TW">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Retro TV 3D Interactive Touch Drag Calibration</title>
-    <!-- Google Chinese Font: Noto Sans TC & DotGothic16 -->
-    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Retro TV 3D TransformControls Screen Calibration</title>
+    <!-- Google Chinese Font: Noto Sans TC -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     
-    <!-- Three.js and OrbitControls -->
+    <!-- Three.js, OrbitControls, TransformControls -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/TransformControls.js"></script>
 
     <style>
         :root {
@@ -29,6 +30,7 @@
             margin: 0;
             padding: 0;
             font-family: 'Noto Sans TC', sans-serif;
+            -webkit-tap-highlight-color: transparent;
         }
 
         body {
@@ -51,79 +53,62 @@
             z-index: 1;
         }
 
-        .ui-layer {
+        .ui-panel {
             position: absolute;
-            top: 24px;
-            left: 24px;
+            top: 20px;
+            left: 20px;
             z-index: 10;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-            max-width: 400px;
-            width: 100%;
-        }
-
-        @media (max-width: 850px) {
-            .ui-layer {
-                left: 16px;
-                top: 16px;
-                right: 16px;
-                max-width: none;
-            }
-        }
-
-        .interactive {
-            pointer-events: auto;
-        }
-
-        .toggle-panel-btn {
-            background: var(--panel-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid var(--panel-border);
-            color: var(--text-main);
-            padding: 10px 16px;
-            border-radius: 12px;
-            cursor: pointer;
-            font-weight: 600;
-            font-size: 0.9rem;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
-        }
-
-        .config-panel {
             background: var(--panel-bg);
             backdrop-filter: blur(16px);
             border: 1px solid var(--panel-border);
             border-radius: 16px;
-            padding: 24px;
+            color: var(--text-main);
             box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+            width: 320px;
+            overflow: hidden;
+            transition: max-height 0.25s ease-out;
+            max-height: 90vh;
+        }
+
+        .ui-panel.collapsed {
+            max-height: 52px;
+        }
+
+        .panel-header {
+            background: rgba(30, 35, 45, 0.9);
+            padding: 12px 16px;
+            cursor: move;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 1px solid var(--panel-border);
+            height: 52px;
+        }
+
+        .panel-title {
+            font-size: 0.9rem;
+            font-weight: bold;
+            color: #60a5fa;
+        }
+
+        .toggle-collapse-btn {
+            background: #374151;
+            color: #fff;
+            border: none;
+            padding: 6px 12px;
+            font-size: 0.8rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .panel-content {
+            padding: 16px;
+            max-height: calc(90vh - 52px);
+            overflow-y: auto;
             display: flex;
             flex-direction: column;
-            gap: 16px;
-            max-height: calc(100vh - 120px);
-            overflow-y: auto;
-        }
-
-        .config-panel.collapsed {
-            opacity: 0;
-            transform: translateY(-10px);
-            max-height: 0;
-            padding: 0 24px;
-            overflow: hidden;
-            border: none;
-            margin: 0;
-        }
-
-        .config-panel h2 {
-            font-size: 0.85rem;
-            text-transform: uppercase;
-            letter-spacing: 1.5px;
-            color: var(--text-dim);
-            border-bottom: 1px solid var(--panel-border);
-            padding-bottom: 8px;
+            gap: 14px;
         }
 
         .control-group {
@@ -133,42 +118,12 @@
         }
 
         .control-group label {
-            font-size: 0.88rem;
+            font-size: 0.85rem;
             font-weight: 500;
-            color: var(--text-main);
-            display: flex;
-            justify-content: space-between;
+            color: var(--text-dim);
         }
 
         input[type="text"] {
-            background: rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-            border-radius: 8px;
-            padding: 10px 14px;
-            color: white;
-            font-size: 0.95rem;
-            outline: none;
-        }
-
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 6px;
-            background: rgba(255, 255, 255, 0.15);
-            border-radius: 3px;
-            outline: none;
-        }
-
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            width: 16px;
-            height: 16px;
-            border-radius: 50%;
-            background: var(--accent);
-            cursor: pointer;
-        }
-
-        select {
             background: rgba(0, 0, 0, 0.5);
             border: 1px solid rgba(255, 255, 255, 0.2);
             border-radius: 8px;
@@ -205,31 +160,43 @@
             background: linear-gradient(135deg, #10b981, #059669);
         }
 
+        .action-btn.warning {
+            background: linear-gradient(135deg, #f59e0b, #d97706);
+        }
+
         .calibration-box {
             background: rgba(15, 23, 42, 0.95);
             border: 1px solid #3b82f6;
             border-radius: 12px;
-            padding: 16px;
+            padding: 14px;
             display: flex;
             flex-direction: column;
-            gap: 12px;
+            gap: 10px;
         }
 
-        .calib-controls {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 8px;
+        .mode-btn-pair {
+            display: flex;
+            gap: 6px;
         }
 
-        .calib-btn {
+        .mode-sub-btn {
+            flex: 1;
             background: #1e293b;
             border: 1px solid rgba(255,255,255,0.2);
-            color: white;
+            color: #ccc;
             padding: 8px;
+            font-size: 0.8rem;
             border-radius: 6px;
             cursor: pointer;
-            font-size: 0.8rem;
+            font-weight: bold;
             text-align: center;
+        }
+
+        .mode-sub-btn.active {
+            background: #3b82f6;
+            border-color: #3b82f6;
+            color: #fff;
+            box-shadow: 0 0 8px rgba(59, 130, 246, 0.5);
         }
 
         #crtTextureCanvas {
@@ -239,16 +206,19 @@
         .hud-instructions {
             position: absolute;
             bottom: 20px;
-            right: 20px;
-            background: rgba(0, 0, 0, 0.7);
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.75);
             backdrop-filter: blur(8px);
-            padding: 10px 16px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            font-size: 0.8rem;
-            color: var(--text-dim);
+            padding: 10px 20px;
+            border-radius: 30px;
+            border: 1px solid rgba(255,255,255,0.15);
+            font-size: 0.85rem;
+            color: #60a5fa;
             pointer-events: none;
             z-index: 100;
+            text-align: center;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
     </style>
 </head>
@@ -257,94 +227,100 @@
     <div id="webgl-container"></div>
     <canvas id="crtTextureCanvas" width="1024" height="768"></canvas>
 
-    <div class="ui-layer">
-        <button class="toggle-panel-btn interactive" id="togglePanelBtn">
-            <span>⚙️ 觸控拖曳定位面板</span>
-            <span id="toggleIcon">▲ 隱藏</span>
-        </button>
-
-        <div class="config-panel interactive" id="configPanel">
-            <h2>電視設定</h2>
-            
+    <div class="ui-panel" id="movable-panel">
+        <div class="panel-header" id="panel-drag-handle">
+            <span class="panel-title">📺 3D 電視螢幕精密定位</span>
+            <button class="toggle-collapse-btn" id="btn-collapse">收合 [-]</button>
+        </div>
+        
+        <div class="panel-content">
             <div class="control-group">
-                <label for="messageInput">顯示文字</label>
+                <label for="messageInput">電視顯示文字</label>
                 <input type="text" id="messageInput" value="正在顯示：復古電視 3D 模型">
             </div>
 
-            <div class="control-group">
-                <label for="textSizeRange">文字大小</label>
-                <input type="range" id="textSizeRange" min="1" max="3" value="2" step="1">
-            </div>
-
-            <div class="control-group">
-                <label for="scrollSpeedRange">捲動速度</label>
-                <input type="range" id="scrollSpeedRange" min="0" max="3" value="2" step="1">
-            </div>
-
-            <div class="control-group">
-                <label for="fontSelect">中文字型</label>
-                <select id="fontSelect">
-                    <option value="Noto Sans TC" selected>思源黑體</option>
-                    <option value="DotGothic16">像素點陣體</option>
-                    <option value="monospace">等寬字體</option>
-                </select>
-            </div>
-
             <div class="btn-row">
-                <button class="action-btn" id="confirmBtn">確認開機/重整</button>
+                <button class="action-btn" id="confirmBtn">開機預覽</button>
                 <button class="action-btn off" id="powerOffBtn">關機效果</button>
             </div>
 
-            <!-- Calibration Section -->
+            <!-- Calibration Section using TransformControls -->
             <div class="calibration-box">
-                <h3 style="color: #60a5fa; font-size: 0.9rem;">🎯 觸控拖曳定位工具</h3>
-                <div id="calibStep1Container">
-                    <button class="action-btn success" id="startCalibBtn">📍 開始觸控拖曳定位</button>
+                <h3 style="color: #60a5fa; font-size: 0.88rem; margin-bottom: 4px;">🎛️ 螢幕 3D 調整工具箱</h3>
+                <p style="font-size: 0.78rem; color: #94a3b8; line-height: 1.4;">
+                    點擊下方按鈕啟動控制框，直接用 3D 箭頭移動、旋轉或縮放螢幕至完美貼合！
+                </p>
+                
+                <div style="display: flex; gap: 8px; margin-top: 4px;">
+                    <button class="action-btn success" id="toggleCalibBtn" style="flex: 1; padding: 10px; font-size: 0.85rem;">🔧 開啟螢幕調整框</button>
                 </div>
-                <div id="calibStep2Container" style="display: none;">
-                    <p id="calibInstruction" style="font-size: 0.82rem; color: #cbd5e1;"></p>
-                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">請用手指直接拖曳紅點</div>
-                    <div class="calib-controls">
-                        <button class="calib-btn" onclick="adjustPos('x', -0.01)">X -</button>
-                        <button class="calib-btn" onclick="adjustPos('y', 0.01)">Y +</button>
-                        <button class="calib-btn" onclick="adjustPos('x', 0.01)">X +</button>
-                        <button class="calib-btn" onclick="adjustPos('y', -0.01)">Y -</button>
-                        <button class="calib-btn" onclick="adjustPos('z', 0.01)">Z +</button>
-                        <button class="calib-btn" onclick="adjustPos('z', -0.01)">Z -</button>
+
+                <div id="transformModeBox" style="display: none; margin-top: 6px;" class="control-group">
+                    <label>操作模式：</label>
+                    <div class="mode-btn-pair">
+                        <button id="btn-mode-translate" class="mode-sub-btn active" onclick="setTransformMode('translate')">平移 (位置)</button>
+                        <button id="btn-mode-rotate" class="mode-sub-btn" onclick="setTransformMode('rotate')">旋轉 (角度)</button>
+                        <button id="btn-mode-scale" class="mode-sub-btn" onclick="setTransformMode('scale')">縮放 (大小)</button>
                     </div>
-                    <button class="action-btn" id="nextPointBtn" style="margin-top: 8px;">確定此點位置</button>
                 </div>
-                <div id="calibResultContainer" style="display: none;">
-                    <p style="font-size: 0.82rem; color: #34d399;">✅ 雙點定位完成！複製下方數值貼給 AI：</p>
-                    <input type="text" id="resultOutput" readonly style="font-size: 0.8rem; margin-top: 4px;">
-                    <button class="action-btn success" id="copyResultBtn" style="margin-top: 8px;">📋 複製定位數值</button>
+
+                <div id="calibResultContainer" style="display: none; margin-top: 4px;">
+                    <label style="font-size: 0.78rem; color: #34d399;">✅ 當前螢幕數值 (可複製)：</label>
+                    <input type="text" id="resultOutput" readonly style="font-size: 0.78rem; margin-top: 4px;">
+                    <button class="action-btn warning" id="copyResultBtn" style="width: 100%; margin-top: 6px; padding: 8px; font-size: 0.8rem;">📋 複製數值</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <div class="hud-instructions">
-        💡 提示：開啟定位後，可直接用手指按住紅點拖曳移動位置。
+    <div class="hud-instructions" id="hudInstruction">
+        💡 提示：點擊上方控制面板的「開啟螢幕調整框」即可直接在 3D 視角中拖曳調整螢幕。
     </div>
 
     <script>
-        const togglePanelBtn = document.getElementById('togglePanelBtn');
-        const configPanel = document.getElementById('configPanel');
-        const toggleIcon = document.getElementById('toggleIcon');
-        let isPanelOpen = true;
-
-        togglePanelBtn.addEventListener('click', (e) => {
-            e.stopPropagation();
-            isPanelOpen = !isPanelOpen;
-            if (isPanelOpen) {
-                configPanel.classList.remove('collapsed');
-                toggleIcon.textContent = '▲ 隱藏';
-            } else {
-                configPanel.classList.add('collapsed');
-                toggleIcon.textContent = '▼ 展開';
-            }
+        const collapseBtn = document.getElementById('btn-collapse');
+        const panel = document.getElementById('movable-panel');
+        collapseBtn.addEventListener('click', () => {
+            panel.classList.toggle('collapsed');
+            collapseBtn.innerText = panel.classList.contains('collapsed') ? "展開 [+]" : "收合 [-]";
         });
 
+        // Panel draggable handling
+        const handle = document.getElementById('panel-drag-handle');
+        let isDraggingPanel = false, startX, startY, initialLeft, initialTop;
+        handle.addEventListener('mousedown', dragStart);
+        handle.addEventListener('touchstart', dragStart, { passive: false });
+
+        function dragStart(e) {
+            if (e.target === collapseBtn) return;
+            isDraggingPanel = true;
+            const clientX = e.type === 'touchstart' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchstart' ? e.touches[0].clientY : e.clientY;
+            startX = clientX; startY = clientY;
+            const rect = panel.getBoundingClientRect();
+            initialLeft = rect.left; initialTop = rect.top;
+            document.addEventListener('mousemove', dragMove);
+            document.addEventListener('mouseup', dragEnd);
+            document.addEventListener('touchmove', dragMove, { passive: false });
+            document.addEventListener('touchend', dragEnd);
+        }
+        function dragMove(e) {
+            if (!isDraggingPanel) return;
+            if (e.cancelable) e.preventDefault();
+            const clientX = e.type === 'touchmove' ? e.touches[0].clientX : e.clientX;
+            const clientY = e.type === 'touchmove' ? e.touches[0].clientY : e.clientY;
+            panel.style.left = Math.max(0, Math.min(initialLeft + (clientX - startX), window.innerWidth - panel.offsetWidth)) + 'px';
+            panel.style.top = Math.max(0, Math.min(initialTop + (clientY - startY), window.innerHeight - panel.offsetHeight)) + 'px';
+        }
+        function dragEnd() {
+            isDraggingPanel = false;
+            document.removeEventListener('mousemove', dragMove);
+            document.removeEventListener('mouseup', dragEnd);
+            document.removeEventListener('touchmove', dragMove);
+            document.removeEventListener('touchend', dragEnd);
+        }
+
+        // Three.js setup
         const container = document.getElementById('webgl-container');
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0b0f19);
@@ -372,8 +348,6 @@
         const crtTexture = new THREE.CanvasTexture(textCanvas);
 
         let tvState = 'noise';
-        let textX = textCanvas.width;
-        let noiseIntensity = 1.0;
 
         function updateCRTTexture() {
             const w = textCanvas.width;
@@ -390,10 +364,10 @@
             ctx.fillStyle = '#111827';
             ctx.fillRect(0, 0, w, h);
 
-            if (tvState === 'noise' || tvState === 'booting' || noiseIntensity > 0.05) {
+            if (tvState === 'noise' || tvState === 'booting') {
                 const imgData = ctx.getImageData(0, 0, w, h);
                 const data = imgData.data;
-                const intensity = (tvState === 'noise') ? 220 : (noiseIntensity * 100);
+                const intensity = (tvState === 'noise') ? 220 : 100;
                 for (let i = 0; i < data.length; i += 4) {
                     if (Math.random() < 0.4) {
                         const val = Math.random() * intensity;
@@ -418,14 +392,8 @@
 
         let tvMesh = null;
         let screenMesh = null;
-        let calibrationHelper = null;
-        let calibStep = 0;
-        let p1 = new THREE.Vector3();
-        let p2 = new THREE.Vector3();
-        let raycaster = new THREE.Raycaster();
-        let mouse = new THREE.Vector2();
-        let isDragging = false;
-        let dragPlane = new THREE.Plane();
+        let transformControls = null;
+        let isCalibrating = false;
 
         const loader = new THREE.GLTFLoader();
         loader.load('tv__old_tv__retro_tv.glb', function (gltf) {
@@ -438,147 +406,84 @@
             tvMesh.scale.multiplyScalar(1.8 / Math.max(size.x, size.y, size.z));
             scene.add(tvMesh);
 
-            // 套用您剛剛校準好的數值
-            const screenGeo = new THREE.PlaneGeometry(0.242, 2.421);
+            // 精確初始螢幕位置與大小
+            const screenGeo = new THREE.PlaneGeometry(0.78, 0.58);
             const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
             screenMesh = new THREE.Mesh(screenGeo, screenMat);
-            screenMesh.position.set(0.151, 3.121, -0.267);
+            screenMesh.position.set(0, 0.12, 0.43);
             tvMesh.add(screenMesh);
         });
 
-        configPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
-        configPanel.addEventListener('touchstart', (e) => e.stopPropagation());
+        // TransformControls Setup
+        transformControls = new THREE.TransformControls(camera, renderer.domElement);
+        transformControls.size = 0.8;
+        scene.add(transformControls);
 
-        window.addEventListener('pointerdown', (event) => {
-            if (calibStep === 0 || !calibrationHelper) return;
+        transformControls.addEventListener('dragging-changed', (event) => {
+            controls.enabled = !event.value;
+        });
 
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            const intersects = raycaster.intersectObject(calibrationHelper, true);
-
-            if (intersects.length > 0) {
-                isDragging = true;
-                controls.enabled = false;
-
-                dragPlane.setFromNormalAndCoplanarPoint(
-                    camera.getWorldDirection(new THREE.Vector3()).negate(),
-                    calibrationHelper.position
-                );
+        transformControls.addEventListener('change', () => {
+            if (screenMesh && isCalibrating) {
+                updateResultOutput();
             }
         });
 
-        window.addEventListener('pointermove', (event) => {
-            if (!isDragging || !calibrationHelper) return;
-
-            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-
-            raycaster.setFromCamera(mouse, camera);
-            let targetPos = new THREE.Vector3();
-            if (raycaster.ray.intersectPlane(dragPlane, targetPos)) {
-                calibrationHelper.position.copy(targetPos);
-                updatePosDisplay();
-            }
-        });
-
-        window.addEventListener('pointerup', () => {
-            if (isDragging) {
-                isDragging = false;
-                controls.enabled = true;
-            }
-        });
-
-        const startCalibBtn = document.getElementById('startCalibBtn');
-        const calibStep1Container = document.getElementById('calibStep1Container');
-        const calibStep2Container = document.getElementById('calibStep2Container');
-        const calibResultContainer = document.getElementById('calibResultContainer');
-        const calibInstruction = document.getElementById('calibInstruction');
-        const currentPosDisplay = document.getElementById('currentPosDisplay');
-        const nextPointBtn = document.getElementById('nextPointBtn');
-        const resultOutput = document.getElementById('resultOutput');
-        const copyResultBtn = document.getElementById('copyResultBtn');
-
-        startCalibBtn.addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            calibStep = 1;
-            calibStep1Container.style.display = 'none';
-            calibStep2Container.style.display = 'block';
-            calibInstruction.textContent = '步驟 1/2：請用手指【按住紅色球體】直接拖曳至螢幕左下角';
-            
-            const group = new THREE.Group();
-            const sphereGeo = new THREE.SphereGeometry(0.1, 32, 32);
-            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444, depthTest: false });
-            const sphere = new THREE.Mesh(sphereGeo, sphereMat);
-            sphere.renderOrder = 999;
-            group.add(sphere);
-
-            calibrationHelper = group;
-            scene.add(calibrationHelper);
-            calibrationHelper.position.set(0, 0.15, 0.5);
-            updatePosDisplay();
-        });
-
-        window.adjustPos = function(axis, delta) {
-            if (!calibrationHelper) return;
-            calibrationHelper.position[axis] += delta;
-            updatePosDisplay();
+        window.setTransformMode = function(mode) {
+            transformControls.setMode(mode);
+            ['translate', 'rotate', 'scale'].forEach(m => {
+                document.getElementById(`btn-mode-${m}`).classList.toggle('active', m === mode);
+            });
         };
 
-        function updatePosDisplay() {
-            if (!calibrationHelper) return;
-            const p = calibrationHelper.position;
-            currentPosDisplay.textContent = `紅點世界座標: X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)}, Z=${p.z.toFixed(3)}`;
-        }
+        const toggleCalibBtn = document.getElementById('toggleCalibBtn');
+        const transformModeBox = document.getElementById('transformModeBox');
+        const calibResultContainer = document.getElementById('calibResultContainer');
+        const hudInstruction = document.getElementById('hudInstruction');
 
-        nextPointBtn.addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            if (calibStep === 1) {
-                p1.copy(calibrationHelper.position);
-                calibStep = 2;
-                calibInstruction.textContent = '步驟 2/2：請用手指【按住紅色球體】直接拖曳至螢幕右上角';
-                calibrationHelper.position.set(0.2, 0.3, 0.5);
-                updatePosDisplay();
-            } else if (calibStep === 2) {
-                p2.copy(calibrationHelper.position);
-                scene.remove(calibrationHelper);
-                
-                const localP1 = tvMesh.worldToLocal(p1.clone());
-                const localP2 = tvMesh.worldToLocal(p2.clone());
-
-                const center = new THREE.Vector3().addVectors(localP1, localP2).multiplyScalar(0.5);
-                const width = Math.abs(localP2.x - localP1.x);
-                const height = Math.abs(localP2.y - localP1.y);
-
-                screenMesh.geometry.dispose();
-                screenMesh.geometry = new THREE.PlaneGeometry(width, height);
-                screenMesh.position.copy(center);
-
-                calibStep2Container.style.display = 'none';
+        toggleCalibBtn.addEventListener('click', () => {
+            isCalibrating = !isCalibrating;
+            if (isCalibrating) {
+                if (screenMesh) {
+                    scene.attach(screenMesh);
+                    transformControls.attach(screenMesh);
+                }
+                toggleCalibBtn.textContent = '🔒 完成並鎖定螢幕';
+                toggleCalibBtn.className = 'action-btn off';
+                transformModeBox.style.display = 'block';
                 calibResultContainer.style.display = 'block';
-                const resultStr = `screenMesh.geometry = new THREE.PlaneGeometry(${width.toFixed(3)}, ${height.toFixed(3)});\nscreenMesh.position.set(${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)});`;
-                resultOutput.value = resultStr;
+                hudInstruction.textContent = '✨ 已解鎖螢幕 3D 調整框！請使用控制軸直接調整螢幕';
+                updateResultOutput();
+            } else {
+                transformControls.detach();
+                if (tvMesh && screenMesh) {
+                    tvMesh.attach(screenMesh);
+                }
+                toggleCalibBtn.textContent = '🔧 開啟螢幕調整框';
+                toggleCalibBtn.className = 'action-btn success';
+                transformModeBox.style.display = 'none';
+                hudInstruction.textContent = '💡 提示：點擊上方控制面板的「開啟螢幕調整框」即可調整螢幕。';
             }
         });
 
-        copyResultBtn.addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            resultOutput.select();
-            navigator.clipboard.writeText(resultOutput.value);
-            copyResultBtn.textContent = '✅ 已複製！';
-            setTimeout(() => copyResultBtn.textContent = '📋 複製定位數值', 2000);
+        function updateResultOutput() {
+            if (!screenMesh) return;
+            const p = screenMesh.position;
+            const s = screenMesh.scale;
+            const str = `screenMesh.position.set(${p.x.toFixed(3)}, ${p.y.toFixed(3)}, ${p.z.toFixed(3)});\nscreenMesh.scale.set(${s.x.toFixed(3)}, ${s.y.toFixed(3)}, ${s.z.toFixed(3)});`;
+            document.getElementById('resultOutput').value = str;
+        }
+
+        document.getElementById('copyResultBtn').addEventListener('click', () => {
+            const out = document.getElementById('resultOutput');
+            out.select();
+            navigator.clipboard.writeText(out.value);
+            document.getElementById('copyResultBtn').textContent = '✅ 已複製數值！';
+            setTimeout(() => { document.getElementById('copyResultBtn').textContent = '📋 複製數值'; }, 2000);
         });
 
-        document.getElementById('confirmBtn').addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            tvState = 'running';
-        });
-
-        document.getElementById('powerOffBtn').addEventListener('pointerdown', (e) => {
-            e.stopPropagation();
-            tvState = 'off';
-        });
+        document.getElementById('confirmBtn').addEventListener('click', () => { tvState = 'running'; });
+        document.getElementById('powerOffBtn').addEventListener('click', () => { tvState = 'off'; });
 
         function animate() {
             requestAnimationFrame(animate);
