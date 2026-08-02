@@ -46,3 +46,4 @@
 * **縮放視構**：使用滑鼠滾輪（或雙指縮放）。
 * **電源切換**：點擊畫面下方的「電源：關閉 / 開啟」按鈕。
 * **調整參數**：點擊左上角「📺 復古電視設定選單」可隨時收合、展開，並即時調整字型、大小、縱高、速度與色調風格。
+* tv glb 來源： "TV , Old TV , Retro TV" (https://skfb.ly/ozB6N) by Denys Hroshko is licensed under Creative Commons Attribution-NonCommercial (http://creativecommons.org/licenses/by-nc/4.0/).
