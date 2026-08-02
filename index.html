@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Retro TV 3D Interactive Configuration & CRT Effects</title>
+    <title>Retro TV 3D Interactive Calibration Tool</title>
     <!-- Google Chinese Font: Noto Sans TC & DotGothic16 -->
     <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700&family=DotGothic16&display=swap" rel="stylesheet">
     
@@ -15,13 +15,14 @@
     <style>
         :root {
             --bg-color: #0b0f19;
-            --panel-bg: rgba(18, 22, 33, 0.88);
-            --panel-border: rgba(255, 255, 255, 0.12);
+            --panel-bg: rgba(18, 22, 33, 0.92);
+            --panel-border: rgba(255, 255, 255, 0.15);
             --text-main: #f3f4f6;
             --text-dim: #9ca3af;
             --accent: #3b82f6;
             --accent-hover: #2563eb;
             --danger: #ef4444;
+            --success: #10b981;
         }
 
         * {
@@ -61,7 +62,7 @@
             display: flex;
             flex-direction: column;
             gap: 12px;
-            max-width: 380px;
+            max-width: 400px;
             width: 100%;
         }
 
@@ -114,8 +115,6 @@
             max-height: calc(100vh - 120px);
             overflow-y: auto;
             transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            opacity: 1;
-            transform: translateY(0);
         }
 
         .config-panel.collapsed {
@@ -247,6 +246,11 @@
             box-shadow: 0 4px 12px rgba(239, 68, 68, 0.4);
         }
 
+        .action-btn.success {
+            background: linear-gradient(135deg, #10b981, #059669);
+            box-shadow: 0 4px 12px rgba(16, 185, 129, 0.4);
+        }
+
         .action-btn:hover {
             transform: translateY(-1px);
             opacity: 0.95;
@@ -256,12 +260,52 @@
             transform: translateY(1px);
         }
 
-        /* Hidden 2D CRT Screen Rendering Canvas */
+        /* Calibration Panel */
+        .calibration-box {
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid #3b82f6;
+            border-radius: 12px;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 5px;
+        }
+
+        .calibration-box h3 {
+            font-size: 0.9rem;
+            color: #60a5fa;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .calib-controls {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .calib-btn {
+            background: #1e293b;
+            border: 1px solid rgba(255,255,255,0.2);
+            color: white;
+            padding: 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-align: center;
+        }
+
+        .calib-btn:hover {
+            background: #334155;
+            border-color: var(--accent);
+        }
+
         #crtTextureCanvas {
             display: none;
         }
 
-        /* Instructions HUD */
         .hud-instructions {
             position: absolute;
             bottom: 20px;
@@ -284,13 +328,11 @@
     <canvas id="crtTextureCanvas" width="1024" height="768"></canvas>
 
     <div class="ui-layer">
-        <!-- Toggle Button to collapse/expand panel -->
         <button class="toggle-panel-btn interactive" id="togglePanelBtn">
-            <span>⚙️ 設定面板</span>
+            <span>⚙️ 設定與定位面板</span>
             <span id="toggleIcon">▲ 隱藏</span>
         </button>
 
-        <!-- Configuration Control Panel -->
         <div class="config-panel interactive" id="configPanel">
             <h2>電視訊息與畫面設定</h2>
             
@@ -318,21 +360,35 @@
                 </select>
             </div>
 
-            <div class="control-group">
-                <label>文字顏色</label>
-                <div class="radio-row">
-                    <label class="radio-label">
-                        <input type="radio" name="textColor" value="grayscale" checked> 經典灰白
-                    </label>
-                    <label class="radio-label">
-                        <input type="radio" name="textColor" value="white"> 純白發光
-                    </label>
-                </div>
-            </div>
-
             <div class="btn-row">
                 <button class="action-btn" id="confirmBtn">確認開機/重整</button>
                 <button class="action-btn off" id="powerOffBtn">關機效果</button>
+            </div>
+
+            <!-- Calibration Section -->
+            <div class="calibration-box">
+                <h3 id="calibTitle">📐 螢幕 3D 定位工具 (未啟動)</h3>
+                <div id="calibStep1Container">
+                    <button class="action-btn success" id="startCalibBtn">📍 開始螢幕定位 (雙點對齊)</button>
+                </div>
+                <div id="calibStep2Container" style="display: none;">
+                    <p id="calibInstruction" style="font-size: 0.82rem; color: #cbd5e1;"></p>
+                    <div style="font-size: 0.78rem; color: #93c5fd; margin: 4px 0;" id="currentPosDisplay">座標: (0, 0, 0)</div>
+                    <div class="calib-controls">
+                        <button class="calib-btn" onclick="adjustPos('x', -0.01)">X -</button>
+                        <button class="calib-btn" onclick="adjustPos('y', 0.01)">Y +</button>
+                        <button class="calib-btn" onclick="adjustPos('x', 0.01)">X +</button>
+                        <button class="calib-btn" onclick="adjustPos('y', -0.01)">Y -</button>
+                        <button class="calib-btn" onclick="adjustPos('z', 0.01)">Z + (前)</button>
+                        <button class="calib-btn" onclick="adjustPos('z', -0.01)">Z - (後)</button>
+                    </div>
+                    <button class="action-btn" id="nextPointBtn" style="margin-top: 8px;">確定此點位置</button>
+                </div>
+                <div id="calibResultContainer" style="display: none;">
+                    <p style="font-size: 0.82rem; color: #34d399;">✅ 定位完成！請複製下方數值貼給 AI：</p>
+                    <input type="text" id="resultOutput" readonly style="font-size: 0.8rem; margin-top: 4px;">
+                    <button class="action-btn success" id="copyResultBtn" style="margin-top: 8px;">📋 複製定位數值</button>
+                </div>
             </div>
         </div>
     </div>
@@ -342,7 +398,6 @@
     </div>
 
     <script>
-        // --- Panel Toggle Feature ---
         const togglePanelBtn = document.getElementById('togglePanelBtn');
         const configPanel = document.getElementById('configPanel');
         const toggleIcon = document.getElementById('toggleIcon');
@@ -359,9 +414,7 @@
             }
         });
 
-        // --- Three.js Setup & GLB Loading ---
         const container = document.getElementById('webgl-container');
-        
         const scene = new THREE.Scene();
         scene.background = new THREE.Color(0x0b0f19);
 
@@ -380,19 +433,11 @@
         controls.minDistance = 1.0;
         controls.maxDistance = 10.0;
 
-        // Lighting
-        const ambientLight = new THREE.AmbientLight(0xffffff, 1.2);
-        scene.add(ambientLight);
-
+        scene.add(new THREE.AmbientLight(0xffffff, 1.2));
         const dirLight = new THREE.DirectionalLight(0xffffff, 1.5);
         dirLight.position.set(5, 5, 5);
         scene.add(dirLight);
 
-        const pointLight = new THREE.PointLight(0x3b82f6, 1, 10);
-        pointLight.position.set(0, 0, 2);
-        scene.add(pointLight);
-
-        // --- Dynamic 2D CRT Screen Texture Generation ---
         const textCanvas = document.getElementById('crtTextureCanvas');
         const ctx = textCanvas.getContext('2d');
         const crtTexture = new THREE.CanvasTexture(textCanvas);
@@ -400,7 +445,6 @@
         crtTexture.minFilter = THREE.LinearFilter;
         crtTexture.magFilter = THREE.LinearFilter;
 
-        // UI Inputs
         const messageInput = document.getElementById('messageInput');
         const textSizeRange = document.getElementById('textSizeRange');
         const textSizeVal = document.getElementById('textSizeVal');
@@ -410,11 +454,8 @@
         const confirmBtn = document.getElementById('confirmBtn');
         const powerOffBtn = document.getElementById('powerOffBtn');
 
-        const sizeLabels = { '1': '小', '2': '大', '3': '特大' };
-        const speedLabels = { '0': '靜止', '1': '慢速', '2': '中等', '3': '快速' };
-
-        textSizeRange.addEventListener('input', (e) => textSizeVal.textContent = sizeLabels[e.target.value]);
-        scrollSpeedRange.addEventListener('input', (e) => scrollSpeedVal.textContent = speedLabels[e.target.value]);
+        textSizeRange.addEventListener('input', (e) => textSizeVal.textContent = ['小', '大', '特大'][e.target.value - 1]);
+        scrollSpeedRange.addEventListener('input', (e) => scrollSpeedVal.textContent = ['靜止', '慢速', '中等', '快速'][e.target.value]);
 
         let tvState = 'noise';
         let textX = textCanvas.width;
@@ -426,7 +467,7 @@
             size: parseInt(textSizeRange.value),
             speed: parseInt(scrollSpeedRange.value),
             fontFamily: fontSelect.value,
-            textColor: document.querySelector('input[name="textColor"]:checked').value
+            textColor: 'grayscale'
         };
 
         function updateCRTTexture() {
@@ -434,7 +475,6 @@
             const h = textCanvas.height;
             ctx.clearRect(0, 0, w, h);
 
-            const bgGrad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, w * 0.7);
             if (tvState === 'off') {
                 ctx.fillStyle = '#050505';
                 ctx.fillRect(0, 0, w, h);
@@ -442,6 +482,7 @@
                 return;
             }
 
+            const bgGrad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, w * 0.7);
             bgGrad.addColorStop(0, '#111827');
             bgGrad.addColorStop(1, '#030712');
             ctx.fillStyle = bgGrad;
@@ -463,150 +504,149 @@
             }
 
             if (tvState === 'running' || tvState === 'booting') {
-                let baseSize = 48;
-                if (config.size === 1) baseSize = 32;
-                if (config.size === 3) baseSize = 64;
-
-                let fontName = config.fontFamily;
-                if (fontName === 'DotGothic16') {
-                    ctx.font = `bold ${baseSize}px 'DotGothic16', monospace`;
-                } else if (fontName === 'monospace') {
-                    ctx.font = `bold ${baseSize}px monospace`;
-                } else {
-                    ctx.font = `bold ${baseSize}px 'Noto Sans TC', sans-serif`;
-                }
-
+                let baseSize = config.size === 1 ? 32 : (config.size === 3 ? 64 : 48);
+                ctx.font = `bold ${baseSize}px '${config.fontFamily}', sans-serif`;
                 ctx.textAlign = 'center';
                 ctx.textBaseline = 'middle';
-
-                let fillColor = '#f3f4f6';
-                let glowColor = 'rgba(243, 244, 246, 0.8)';
-                if (config.textColor === 'grayscale') {
-                    fillColor = '#cbd5e1';
-                    glowColor = 'rgba(203, 213, 225, 0.5)';
-                }
-
-                ctx.shadowColor = glowColor;
+                ctx.fillStyle = '#cbd5e1';
+                ctx.shadowColor = 'rgba(203, 213, 225, 0.5)';
                 ctx.shadowBlur = 15;
-                ctx.fillStyle = fillColor;
 
                 const lines = config.text.split('\n');
                 const lineHeight = baseSize * 1.5;
                 const startY = h / 2 - ((lines.length - 1) * lineHeight) / 2;
 
                 if (config.speed === 0) {
-                    lines.forEach((line, index) => {
-                        ctx.fillText(line, w / 2, startY + (index * lineHeight));
-                    });
+                    lines.forEach((line, index) => ctx.fillText(line, w / 2, startY + (index * lineHeight)));
                 } else {
-                    lines.forEach((line, index) => {
-                        ctx.fillText(line, textX, startY + (index * lineHeight));
-                    });
-                    let moveStep = config.speed * 3;
-                    textX -= moveStep;
-                    if (textX < -ctx.measureText(config.text).width - 200) {
-                        textX = w + 200;
-                    }
+                    lines.forEach((line, index) => ctx.fillText(line, textX, startY + (index * lineHeight)));
+                    textX -= config.speed * 3;
+                    if (textX < -ctx.measureText(config.text).width - 200) textX = w + 200;
                 }
             }
 
             ctx.shadowBlur = 0;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
-            for (let y = 0; y < h; y += 4) {
-                ctx.fillRect(0, y, w, 2);
-            }
-
-            if (tvState === 'powering_off') {
-                const p = powerOffProgress;
-                if (p < 0.8) {
-                    const heightFactor = Math.max(2, (1 - p / 0.8) * h);
-                    ctx.fillStyle = 'rgba(0,0,0,0.85)';
-                    ctx.fillRect(0, 0, w, (h - heightFactor) / 2);
-                    ctx.fillRect(0, (h + heightFactor) / 2, w, (h - heightFactor) / 2);
-                    
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = '#ffffff';
-                    ctx.shadowBlur = 30;
-                    ctx.fillRect(0, h / 2 - 2, w, 4);
-                } else {
-                    ctx.fillStyle = '#000000';
-                    ctx.fillRect(0, 0, w, h);
-                    const dotSize = Math.max(1, (1 - (p - 0.8) / 0.2) * 50);
-                    ctx.fillStyle = '#ffffff';
-                    ctx.shadowColor = '#ffffff';
-                    ctx.shadowBlur = 40;
-                    ctx.beginPath();
-                    ctx.arc(w / 2, h / 2, dotSize, 0, Math.PI * 2);
-                    ctx.fill();
-                }
-            }
+            for (let y = 0; y < h; y += 4) ctx.fillRect(0, y, w, 2);
 
             crtTexture.needsUpdate = true;
         }
 
-        // --- Load GLB Model & Automatically Position Screen based on Model Bounding Box ---
+        // --- Load GLB Model & Calibration Setup ---
         let tvMesh = null;
+        let screenMesh = null;
+        let calibrationHelper = null;
+        let calibStep = 0; // 0: off, 1: bottom-left, 2: top-right
+        let p1 = new THREE.Vector3();
+        let p2 = new THREE.Vector3();
+
         const loader = new THREE.GLTFLoader();
-        
-        loader.load(
-            'tv__old_tv__retro_tv.glb',
-            function (gltf) {
-                tvMesh = gltf.scene;
-                const box = new THREE.Box3().setFromObject(tvMesh);
-                const center = box.getCenter(new THREE.Vector3());
-                const size = box.getSize(new THREE.Vector3());
-                
-                tvMesh.position.sub(center);
-                
-                const maxDim = Math.max(size.x, size.y, size.z);
-                const scaleFactor = 1.8 / maxDim;
-                tvMesh.scale.multiplyScalar(scaleFactor);
+        loader.load('tv__old_tv__retro_tv.glb', function (gltf) {
+            tvMesh = gltf.scene;
+            const box = new THREE.Box3().setFromObject(tvMesh);
+            const center = box.getCenter(new THREE.Vector3());
+            const size = box.getSize(new THREE.Vector3());
+            
+            tvMesh.position.sub(center);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            tvMesh.scale.multiplyScalar(1.8 / maxDim);
+            scene.add(tvMesh);
 
-                scene.add(tvMesh);
-
-                // 使用模型的實際尺寸等比計算螢幕大小與位置，確保完美對齊電視正上方凹槽
-                const screenWidth = size.x * 0.58;
-                const screenHeight = size.y * 0.48;
-                const screenGeo = new THREE.PlaneGeometry(screenWidth, screenHeight);
-                const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture });
-                const screenMesh = new THREE.Mesh(screenGeo, screenMat);
-                
-                // 動態對齊至電視正面中心偏上一點的位置
-                screenMesh.position.set(0, size.y * 0.14, (size.z / 2) * 0.96);
-                tvMesh.add(screenMesh);
-            },
-            undefined,
-            function (error) {
-                console.warn('Could not load GLB, using fallback TV model.', error);
-                createFallbackTV();
-            }
-        );
-
-        function createFallbackTV() {
+            // Initial screen mesh
+            const screenGeo = new THREE.PlaneGeometry(0.8, 0.6);
+            const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture, side: THREE.DoubleSide });
+            screenMesh = new THREE.Mesh(screenGeo, screenMat);
+            screenMesh.position.set(0, 0.15, 0.45);
+            tvMesh.add(screenMesh);
+        }, undefined, function (error) {
+            console.warn('GLB load error, using fallback.', error);
             const group = new THREE.Group();
-            const cabinetGeo = new THREE.BoxGeometry(1.6, 1.2, 1.2);
-            const cabinetMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.7 });
-            const cabinet = new THREE.Mesh(cabinetGeo, cabinetMat);
+            const cabinet = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.2, 1.2), new THREE.MeshStandardMaterial({ color: 0x3d2817 }));
             group.add(cabinet);
-
-            const screenPlaneGeo = new THREE.PlaneGeometry(1.0, 0.8);
-            const screenMat = new THREE.MeshBasicMaterial({ map: crtTexture });
-            const screen = new THREE.Mesh(screenPlaneGeo, screenMat);
-            screen.position.set(0, 0, 0.61);
-            group.add(screen);
-
+            screenMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 0.8), new THREE.MeshBasicMaterial({ map: crtTexture }));
+            screenMesh.position.set(0, 0, 0.61);
+            group.add(screenMesh);
             scene.add(group);
             tvMesh = group;
+        });
+
+        // Calibration UI Logic
+        const startCalibBtn = document.getElementById('startCalibBtn');
+        const calibStep1Container = document.getElementById('calibStep1Container');
+        const calibStep2Container = document.getElementById('calibStep2Container');
+        const calibResultContainer = document.getElementById('calibResultContainer');
+        const calibInstruction = document.getElementById('calibInstruction');
+        const currentPosDisplay = document.getElementById('currentPosDisplay');
+        const nextPointBtn = document.getElementById('nextPointBtn');
+        const resultOutput = document.getElementById('resultOutput');
+        const copyResultBtn = document.getElementById('copyResultBtn');
+
+        startCalibBtn.addEventListener('click', () => {
+            calibStep = 1;
+            calibStep1Container.style.display = 'none';
+            calibStep2Container.style.display = 'block';
+            calibInstruction.textContent = '步驟 1/2：請調整數值，將定位點移至【螢幕左下角】';
+            
+            // Create Red Helper Sphere
+            const sphereGeo = new THREE.SphereGeometry(0.03, 16, 16);
+            const sphereMat = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+            calibrationHelper = new THREE.Mesh(sphereGeo, sphereMat);
+            tvMesh.add(calibrationHelper);
+            calibrationHelper.position.set(0, 0, 0.5);
+            updatePosDisplay();
+        });
+
+        window.adjustPos = function(axis, delta) {
+            if (!calibrationHelper) return;
+            calibrationHelper.position[axis] += delta;
+            updatePosDisplay();
+        };
+
+        function updatePosDisplay() {
+            if (!calibrationHelper) return;
+            const p = calibrationHelper.position;
+            currentPosDisplay.textContent = `目前座標: X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)}, Z=${p.z.toFixed(3)}`;
         }
 
-        // --- Animation Sequences ---
+        nextPointBtn.addEventListener('click', () => {
+            if (calibStep === 1) {
+                p1.copy(calibrationHelper.position);
+                calibStep = 2;
+                calibInstruction.textContent = '步驟 2/2：請調整數值，將定位點移至【螢幕右上角】';
+                calibrationHelper.position.set(0.2, 0.3, 0.5);
+                updatePosDisplay();
+            } else if (calibStep === 2) {
+                p2.copy(calibrationHelper.position);
+                tvMesh.remove(calibrationHelper);
+                
+                // Calculate center and size from p1 and p2
+                const center = new THREE.Vector3().addVectors(p1, p2).multiplyScalar(0.5);
+                const width = Math.abs(p2.x - p1.x);
+                const height = Math.abs(p2.y - p1.y);
+
+                screenMesh.geometry.dispose();
+                screenMesh.geometry = new THREE.PlaneGeometry(width, height);
+                screenMesh.position.copy(center);
+
+                calibStep2Container.style.display = 'none';
+                calibResultContainer.style.display = 'block';
+                const resultStr = `screenMesh.geometry = new THREE.PlaneGeometry(${width.toFixed(3)}, ${height.toFixed(3)});\nscreenMesh.position.set(${center.x.toFixed(3)}, ${center.y.toFixed(3)}, ${center.z.toFixed(3)});`;
+                resultOutput.value = resultStr;
+            }
+        });
+
+        copyResultBtn.addEventListener('click', () => {
+            resultOutput.select();
+            navigator.clipboard.writeText(resultOutput.value);
+            copyResultBtn.textContent = '✅ 已複製！';
+            setTimeout(() => copyResultBtn.textContent = '📋 複製定位數值', 2000);
+        });
+
         function startBootSequence() {
             config.text = messageInput.value;
             config.size = parseInt(textSizeRange.value);
             config.speed = parseInt(scrollSpeedRange.value);
             config.fontFamily = fontSelect.value;
-            config.textColor = document.querySelector('input[name="textColor"]:checked').value;
-
             tvState = 'noise';
             noiseIntensity = 1.0;
             textX = textCanvas.width;
@@ -615,39 +655,16 @@
                 if (tvState === 'noise') {
                     tvState = 'booting';
                     noiseIntensity = 0.4;
-                    setTimeout(() => {
-                        if (tvState === 'booting') {
-                            tvState = 'running';
-                            noiseIntensity = 0.05;
-                        }
-                    }, 600);
+                    setTimeout(() => { if (tvState === 'booting') { tvState = 'running'; noiseIntensity = 0.05; } }, 600);
                 }
             }, 1200);
         }
 
-        function startPowerOffSequence() {
-            if (tvState === 'off' || tvState === 'powering_off') return;
-            tvState = 'powering_off';
-            powerOffProgress = 0;
-
-            const startTime = performance.now();
-            const duration = 1000;
-
-            function animatePowerOff(now) {
-                const elapsed = now - startTime;
-                powerOffProgress = Math.min(1.0, elapsed / duration);
-
-                if (powerOffProgress < 1.0) {
-                    requestAnimationFrame(animatePowerOff);
-                } else {
-                    tvState = 'off';
-                }
-            }
-            requestAnimationFrame(animatePowerOff);
-        }
-
         confirmBtn.addEventListener('click', startBootSequence);
-        powerOffBtn.addEventListener('click', startPowerOffSequence);
+        powerOffBtn.addEventListener('click', () => {
+            if (tvState === 'off') return;
+            tvState = 'off';
+        });
 
         startBootSequence();
 
