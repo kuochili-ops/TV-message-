@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro TV Message & Stream Configuration</title>
+    <style>
+        :root {
+            --bg-color: #121212;
+            --panel-bg: rgba(28, 28, 32, 0.85);
+            --panel-border: rgba(255, 255, 255, 0.1);
+            --text-main: #f0f0f0;
+            --text-dim: #aaa;
+            --accent: #3b82f6;
+            --accent-hover: #2563eb;
+            --danger: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+
+        /* Background Room Ambience */
+        .room-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: radial-gradient(circle at center, #2a2521 0%, #110e0c 100%);
+            z-index: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .room-bg::after {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            z-index: 1;
+        }
+
+        /* Main Workspace Container */
+        .workspace {
+            position: relative;
+            z-index: 10;
+            width: 100%;
+            max-width: 1200px;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: 380px 1fr;
+            gap: 30px;
+            align-items: center;
+        }
+
+        @media (max-width: 900px) {
+            .workspace {
+                grid-template-columns: 1fr;
+                max-width: 600px;
+                overflow-y: auto;
+                max-height: 100vh;
+            }
+        }
+
+        /* Configuration Control Panel */
+        .config-panel {
+            background: var(--panel-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--panel-border);
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.5);
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .config-panel h2 {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1.5px;
+            color: var(--text-dim);
+            border-bottom: 1px solid var(--panel-border);
+            padding-bottom: 10px;
+        }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .control-group label {
+            font-size: 0.9rem;
+            font-weight: 500;
+            color: var(--text-main);
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .control-group label span {
+            color: var(--accent);
+            text-transform: capitalize;
+            font-size: 0.8rem;
+        }
+
+        input[type="text"] {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus {
+            border-color: var(--accent);
+        }
+
+        input[type="range"] {
+            -webkit-appearance: none;
+            width: 100%;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            outline: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 16px;
+            height: 16px;
+            border-radius: 50%;
+            background: var(--accent);
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.2);
+        }
+
+        select {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            border-radius: 8px;
+            padding: 10px 14px;
+            color: white;
+            font-size: 0.95rem;
+            outline: none;
+            cursor: pointer;
+        }
+
+        .radio-row {
+            display: flex;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .radio-label {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.9rem;
+            cursor: pointer;
+            color: var(--text-dim);
+        }
+
+        .radio-label input {
+            accent-color: var(--accent);
+            cursor: pointer;
+        }
+
+        .confirm-btn {
+            background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+            border: none;
+            border-radius: 8px;
+            padding: 12px;
+            color: white;
+            font-weight: 600;
+            font-size: 0.95rem;
+            letter-spacing: 0.5px;
+            cursor: pointer;
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+            transition: all 0.2s ease;
+            text-align: center;
+        }
+
+        .confirm-btn:hover {
+            background: linear-gradient(135deg, #2563eb, #1e40af);
+            box-shadow: 0 6px 16px rgba(59, 130, 246, 0.6);
+            transform: translateY(-1px);
+        }
+
+        .confirm-btn:active {
+            transform: translateY(1px);
+        }
+
+        /* Retro TV Display Unit */
+        .tv-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            position: relative;
+        }
+
+        .tv-cabinet {
+            background: #231b15;
+            border-radius: 24px;
+            padding: 24px 30px 24px 24px;
+            box-shadow: 0 30px 60px rgba(0,0,0,0.8), inset 0 2px 5px rgba(255,255,255,0.05);
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            border: 4px solid #17110d;
+            position: relative;
+        }
+
+        .tv-screen-bezel {
+            background: #110d0a;
+            border-radius: 16px;
+            padding: 18px;
+            box-shadow: inset 0 10px 20px rgba(0,0,0,0.9);
+            position: relative;
+        }
+
+        /* CRT Screen & Effects */
+        .crt-screen {
+            width: 480px;
+            height: 360px;
+            background: #0d1117;
+            border-radius: 12px;
+            position: relative;
+            overflow: hidden;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.9);
+        }
+
+        @media (max-width: 600px) {
+            .crt-screen {
+                width: 100vw;
+                max-width: 360px;
+                height: 270px;
+            }
+        }
+
+        /* Screen Canvas for text/animations */
+        #screenCanvas {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 2;
+        }
+
+        /* Scanlines Overlay */
+        .scanlines {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.3) 50%
+            );
+            background-size: 100% 4px;
+            z-index: 4;
+            pointer-events: none;
+            opacity: 0.6;
+        }
+
+        /* CRT Vignette & Curvature Glow */
+        .crt-vignette {
+            position: absolute;
+            inset: 0;
+            box-shadow: inset 0 0 80px rgba(0,0,0,0.8), inset 0 0 20px rgba(0,0,0,0.9);
+            z-index: 5;
+            pointer-events: none;
+            border-radius: 12px;
+        }
+
+        /* Static Noise Overlay */
+        .static-noise {
+            position: absolute;
+            inset: -50%;
+            width: 200%;
+            height: 200%;
+            background-image: url('data:image/svg+xml;utf8,<svg viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg"><filter id="noiseFilter"><feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="3" stitchTiles="stitch"/></filter><rect width="100%25" height="100%25" filter="url(%23noiseFilter)" opacity="0.15"/></svg>');
+            opacity: 0.08;
+            z-index: 3;
+            pointer-events: none;
+            animation: noiseMove 0.2s steps(4) infinite;
+        }
+
+        @keyframes noiseMove {
+            0% { transform: translate(0, 0); }
+            25% { transform: translate(-5%, 5%); }
+            50% { transform: translate(5%, -5%); }
+            75% { transform: translate(-2%, -2%); }
+            100% { transform: translate(0, 0); }
+        }
+
+        /* TV Controls Side Panel */
+        .tv-controls-side {
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            height: 320px;
+            align-items: center;
+            padding: 10px 0;
+        }
+
+        .tv-speaker-grille {
+            width: 45px;
+            height: 120px;
+            background: repeating-linear-gradient(
+                0deg,
+                #0d0a08,
+                #0d0a08 3px,
+                #1e1713 3px,
+                #1e1713 6px
+            );
+            border-radius: 4px;
+            box-shadow: inset 0 2px 4px rgba(0,0,0,0.8);
+        }
+
+        .tv-knobs {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            align-items: center;
+        }
+
+        .knob {
+            width: 32px;
+            height: 32px;
+            background: radial-gradient(circle at 30% 30%, #44372e, #17110d);
+            border-radius: 50%;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.6), inset 0 1px 2px rgba(255,255,255,0.2);
+            position: relative;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+
+        .knob::after {
+            content: '';
+            position: absolute;
+            top: 4px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 3px;
+            height: 8px;
+            background: #b0a090;
+            border-radius: 2px;
+        }
+
+        .knob:active {
+            transform: rotate(45deg);
+        }
+
+        .power-led {
+            width: 8px;
+            height: 8px;
+            background-color: #ef4444;
+            border-radius: 50%;
+            box-shadow: 0 0 8px #ef4444, inset 0 1px 2px rgba(255,255,255,0.5);
+            animation: pulseLed 2s infinite alternate;
+        }
+
+        @keyframes pulseLed {
+            0% { opacity: 0.6; box-shadow: 0 0 4px #ef4444; }
+            100% { opacity: 1; box-shadow: 0 0 10px #ef4444; }
+        }
+
+        /* Power Transition Flash */
+        .crt-screen::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: white;
+            z-index: 10;
+            opacity: 0;
+            pointer-events: none;
+        }
+
+        .crt-screen.turning-on::before {
+            animation: turnOnFlash 0.4s cubic-bezier(0.1, 1, 0.1, 1) forwards;
+        }
+
+        @keyframes turnOnFlash {
+            0% { opacity: 1; transform: scale(0.001, 0.001); }
+            50% { opacity: 0.8; transform: scale(1, 0.002); }
+            100% { opacity: 0; transform: scale(1, 1); }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="room-bg"></div>
+
+    <div class="workspace">
+        <!-- Configuration Panel -->
+        <div class="config-panel">
+            <h2>Message Configuration</h2>
+            
+            <div class="control-group">
+                <label for="messageInput">Display Text</label>
+                <input type="text" id="messageInput" value="DISPLAYING: SKETCHFAB TV MODEL">
+            </div>
+
+            <div class="control-group">
+                <label for="textSizeRange">Text Size <span id="textSizeVal">Large</span></label>
+                <input type="range" id="textSizeRange" min="1" max="3" value="2" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="scrollSpeedRange">Scroll Speed <span id="scrollSpeedVal">Fast</span></label>
+                <input type="range" id="scrollSpeedRange" min="0" max="3" value="3" step="1">
+            </div>
+
+            <div class="control-group">
+                <label for="fontSelect">Font Style</label>
+                <select id="fontSelect">
+                    <option value="dotMatrix" selected>Retro Dot Matrix</option>
+                    <option value="mono">Terminal Monospace</option>
+                    <option value="arcade">Classic Arcade</option>
+                </select>
+            </div>
+
+            <div class="control-group">
+                <label>Text Color Palette</label>
+                <div class="radio-row">
+                    <label class="radio-label">
+                        <input type="radio" name="textColor" value="grayscale" checked> Grayscale
+                    </label>
+                    <label class="radio-label">
+                        <input type="radio" name="textColor" value="white"> White
+                    </label>
+                </div>
+            </div>
+
+            <div class="control-group">
+                <label>Background Theme</label>
+                <div class="radio-row">
+                    <label class="radio-label">
+                        <input type="radio" name="bgColor" value="grayscale" checked> Grayscale
+                    </label>
+                </div>
+            </div>
+
+            <button class="confirm-btn" id="confirmBtn">CONFIRM</button>
+        </div>
+
+        <!-- TV Display Unit -->
+        <div class="tv-container">
+            <div class="tv-cabinet">
+                <div class="tv-screen-bezel">
+                    <div class="crt-screen" id="crtScreen">
+                        <div class="static-noise"></div>
+                        <canvas id="screenCanvas"></canvas>
+                        <div class="scanlines"></div>
+                        <div class="crt-vignette"></div>
+                    </div>
+                </div>
+
+                <div class="tv-controls-side">
+                    <div class="tv-speaker-grille"></div>
+                    <div class="tv-knobs">
+                        <div class="knob" title="Channel Tune"></div>
+                        <div class="knob" title="Volume / Brightness"></div>
+                    </div>
+                    <div class="power-led" title="Power Status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // UI Elements mapping
+        const messageInput = document.getElementById('messageInput');
+        const textSizeRange = document.getElementById('textSizeRange');
+        const textSizeVal = document.getElementById('textSizeVal');
+        const scrollSpeedRange = document.getElementById('scrollSpeedRange');
+        const scrollSpeedVal = document.getElementById('scrollSpeedVal');
+        const fontSelect = document.getElementById('fontSelect');
+        const confirmBtn = document.getElementById('confirmBtn');
+        const crtScreen = document.getElementById('crtScreen');
+        const canvas = document.getElementById('screenCanvas');
+        const ctx = canvas.getContext('2d');
+
+        // Text Size Labels mapping
+        const sizeLabels = { '1': 'Small', '2': 'Large', '3': 'Extra Large' };
+        // Scroll Speed Labels mapping
+        const speedLabels = { '0': 'Paused', '1': 'Slow', '2': 'Medium', '3': 'Fast' };
+
+        textSizeRange.addEventListener('input', (e) => {
+            textSizeVal.textContent = sizeLabels[e.target.value];
+        });
+
+        scrollSpeedRange.addEventListener('input', (e) => {
+            scrollSpeedVal.textContent = speedLabels[e.target.value];
+        });
+
+        // Animation State
+        let config = {
+            text: messageInput.value,
+            size: parseInt(textSizeRange.value),
+            speed: parseInt(scrollSpeedRange.value),
+            fontStyle: fontSelect.value,
+            textColor: document.querySelector('input[name="textColor"]:checked').value
+        };
+
+        // Resize Canvas dynamically
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Dot matrix custom font generator simulator or standard font rendering with look
+        let textX = canvas.width;
+        let animId;
+
+        function drawCRTContent() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Subtle background CRT glow gradient
+            const bgGrad = ctx.createRadialGradient(
+                canvas.width / 2, canvas.height / 2, 10,
+                canvas.width / 2, canvas.height / 2, canvas.width * 0.7
+            );
+            bgGrad.addColorStop(0, '#1c2128');
+            bgGrad.addColorStop(1, '#0d1117');
+            ctx.fillStyle = bgGrad;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Determine font sizing and styling
+            let baseFontSize = 24;
+            if (config.size === 1) baseFontSize = 16;
+            if (config.size === 3) baseFontSize = 36;
+
+            let fontString = `${baseFontSize}px monospace`;
+            if (config.fontStyle === 'dotMatrix') {
+                fontString = `bold ${baseFontSize}px "Courier New", Courier, monospace`;
+            } else if (config.fontStyle === 'arcade') {
+                fontString = `bold ${baseFontSize}px Impact, sans-serif`;
+            }
+
+            ctx.font = fontString;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+
+            // Color configuration
+            let fillColor = '#e2e8f0';
+            let glowColor = 'rgba(226, 232, 240, 0.6)';
+
+            if (config.textColor === 'grayscale') {
+                fillColor = '#cbd5e1';
+                glowColor = 'rgba(203, 213, 225, 0.4)';
+            }
+
+            // Draw text with glow / blooming effect
+            ctx.shadowColor = glowColor;
+            ctx.shadowBlur = 12;
+            ctx.fillStyle = fillColor;
+
+            // Handle multi-line support or horizontal scrolling
+            const lines = config.text.split('\n');
+            const lineHeight = baseFontSize * 1.4;
+            const startY = canvas.height / 2 - ((lines.length - 1) * lineHeight) / 2;
+
+            if (config.speed === 0) {
+                // Static / Centered view if speed is paused
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, canvas.width / 2, startY + (index * lineHeight));
+                });
+            } else {
+                // Scrolling marquee simulation
+                lines.forEach((line, index) => {
+                    ctx.fillText(line, textX, startY + (index * lineHeight));
+                });
+
+                // Update scroll position based on speed
+                let moveStep = config.speed * 1.5;
+                textX -= moveStep;
+
+                // Reset position when text scrolls off screen
+                if (textX < -ctx.measureText(config.text).width - 100) {
+                    textX = canvas.width + 100;
+                }
+            }
+
+            animId = requestAnimationFrame(drawCRTContent);
+        }
+
+        // Trigger TV turn-on effect and update config
+        function applyConfiguration() {
+            config.text = messageInput.value || ' ';
+            config.size = parseInt(textSizeRange.value);
+            config.speed = parseInt(scrollSpeedRange.value);
+            config.fontStyle = fontSelect.value;
+            config.textColor = document.querySelector('input[name="textColor"]:checked').value;
+
+            // Reset ticker position
+            textX = canvas.width;
+
+            // Trigger visual CRT flash effect
+            crtScreen.classList.remove('turning-on');
+            void crtScreen.offsetWidth; // Force reflow
+            crtScreen.classList.add('turning-on');
+        }
+
+        confirmBtn.addEventListener('click', applyConfiguration);
+
+        // Initial launch animation loop
+        drawCRTContent();
+    </script>
+</body>
+</html>
