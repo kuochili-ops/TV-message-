@@ -15,7 +15,7 @@
     <style>
         :root {
             --bg-color: #0b0f19;
-            --panel-bg: rgba(18, 22, 33, 0.92);
+            --panel-bg: rgba(18, 22, 33, 0.95);
             --panel-border: rgba(255, 255, 255, 0.15);
             --text-main: #f3f4f6;
             --text-dim: #9ca3af;
@@ -29,7 +29,6 @@
             margin: 0;
             padding: 0;
             font-family: 'Noto Sans TC', sans-serif;
-            touch-action: none; /* 防止行動裝置預設捲動或縮放干擾 */
         }
 
         body {
@@ -76,7 +75,6 @@
 
         .interactive {
             pointer-events: auto;
-            touch-action: auto;
         }
 
         .toggle-panel-btn {
@@ -335,7 +333,8 @@
         const toggleIcon = document.getElementById('toggleIcon');
         let isPanelOpen = true;
 
-        togglePanelBtn.addEventListener('click', () => {
+        togglePanelBtn.addEventListener('click', (e) => {
+            e.stopPropagation();
             isPanelOpen = !isPanelOpen;
             if (isPanelOpen) {
                 configPanel.classList.remove('collapsed');
@@ -446,21 +445,23 @@
             tvMesh.add(screenMesh);
         });
 
-        // 觸控拖曳紅點邏輯 (使用 pointerdown / pointermove / pointerup 支援手機與滑鼠)
+        // 防止面板上的點擊穿透到畫布去旋轉相機
+        configPanel.addEventListener('pointerdown', (e) => e.stopPropagation());
+        configPanel.addEventListener('touchstart', (e) => e.stopPropagation());
+
+        // 觸控拖曳紅點邏輯
         window.addEventListener('pointerdown', (event) => {
             if (calibStep === 0 || !calibrationHelper) return;
-            if (event.clientX < 420 && event.clientY < window.innerHeight - 50) return;
 
             mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
             mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
 
             raycaster.setFromCamera(mouse, camera);
-            // 檢查是否點到紅點（放大判定範圍）
             const intersects = raycaster.intersectObject(calibrationHelper, true);
 
             if (intersects.length > 0) {
                 isDragging = true;
-                controls.enabled = false; // 暫停 3D 旋轉
+                controls.enabled = false;
 
                 dragPlane.setFromNormalAndCoplanarPoint(
                     camera.getWorldDirection(new THREE.Vector3()).negate(),
@@ -486,7 +487,7 @@
         window.addEventListener('pointerup', () => {
             if (isDragging) {
                 isDragging = false;
-                controls.enabled = true; // 恢復 3D 旋轉
+                controls.enabled = true;
             }
         });
 
@@ -500,22 +501,23 @@
         const resultOutput = document.getElementById('resultOutput');
         const copyResultBtn = document.getElementById('copyResultBtn');
 
-        startCalibBtn.addEventListener('click', () => {
+        // 使用 pointerdown 確保手機點擊按鈕能立即反應
+        startCalibBtn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
             calibStep = 1;
             calibStep1Container.style.display = 'none';
             calibStep2Container.style.display = 'block';
             calibInstruction.textContent = '步驟 1/2：請用手指【按住紅色球體】直接拖曳至螢幕左下角';
             
-            // 建立較大的紅色球體與透明大判定範圍，確保手指輕鬆點到
             const group = new THREE.Group();
-            const sphereGeo = new THREE.SphereGeometry(0.06, 32, 32);
+            const sphereGeo = new THREE.SphereGeometry(0.08, 32, 32);
             const sphereMat = new THREE.MeshBasicMaterial({ color: 0xef4444 });
             const sphere = new THREE.Mesh(sphereGeo, sphereMat);
             group.add(sphere);
 
             calibrationHelper = group;
             scene.add(calibrationHelper);
-            calibrationHelper.position.set(0, 0, 1);
+            calibrationHelper.position.set(0, 0.15, 0.5);
             updatePosDisplay();
         });
 
@@ -531,12 +533,13 @@
             currentPosDisplay.textContent = `紅點世界座標: X=${p.x.toFixed(3)}, Y=${p.y.toFixed(3)}, Z=${p.z.toFixed(3)}`;
         }
 
-        nextPointBtn.addEventListener('click', () => {
+        nextPointBtn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
             if (calibStep === 1) {
                 p1.copy(calibrationHelper.position);
                 calibStep = 2;
                 calibInstruction.textContent = '步驟 2/2：請用手指【按住紅色球體】直接拖曳至螢幕右上角';
-                calibrationHelper.position.set(0.2, 0.2, 1);
+                calibrationHelper.position.set(0.2, 0.3, 0.5);
                 updatePosDisplay();
             } else if (calibStep === 2) {
                 p2.copy(calibrationHelper.position);
@@ -560,15 +563,23 @@
             }
         });
 
-        copyResultBtn.addEventListener('click', () => {
+        copyResultBtn.addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
             resultOutput.select();
             navigator.clipboard.writeText(resultOutput.value);
             copyResultBtn.textContent = '✅ 已複製！';
             setTimeout(() => copyResultBtn.textContent = '📋 複製定位數值', 2000);
         });
 
-        document.getElementById('confirmBtn').addEventListener('click', () => { tvState = 'running'; });
-        document.getElementById('powerOffBtn').addEventListener('click', () => { tvState = 'off'; });
+        document.getElementById('confirmBtn').addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            tvState = 'running';
+        });
+
+        document.getElementById('powerOffBtn').addEventListener('pointerdown', (e) => {
+            e.stopPropagation();
+            tvState = 'off';
+        });
 
         function animate() {
             requestAnimationFrame(animate);
