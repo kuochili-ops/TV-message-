@@ -54,26 +54,50 @@
         /* UI Overlay Layer */
         .ui-layer {
             position: absolute;
-            inset: 0;
+            top: 24px;
+            left: 24px;
             z-index: 10;
             pointer-events: none;
-            display: grid;
-            grid-template-columns: 380px 1fr;
-            padding: 24px;
-            gap: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            max-width: 380px;
+            width: 100%;
         }
 
         @media (max-width: 850px) {
             .ui-layer {
-                grid-template-columns: 1fr;
-                grid-template-rows: auto 1fr;
-                overflow-y: auto;
-                pointer-events: auto;
+                left: 16px;
+                top: 16px;
+                right: 16px;
+                max-width: none;
             }
         }
 
         .interactive {
             pointer-events: auto;
+        }
+
+        /* Toggle Button */
+        .toggle-panel-btn {
+            background: var(--panel-bg);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--panel-border);
+            color: var(--text-main);
+            padding: 10px 16px;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
+            transition: background 0.2s;
+        }
+
+        .toggle-panel-btn:hover {
+            background: rgba(28, 34, 48, 0.95);
         }
 
         /* Control Panel */
@@ -87,8 +111,22 @@
             display: flex;
             flex-direction: column;
             gap: 16px;
-            max-height: calc(100vh - 48px);
+            max-height: calc(100vh - 120px);
             overflow-y: auto;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .config-panel.collapsed {
+            opacity: 0;
+            transform: translateY(-10px);
+            max-height: 0;
+            padding: 0 24px;
+            overflow: hidden;
+            border: none;
+            box-shadow: none;
+            margin: 0;
         }
 
         .config-panel h2 {
@@ -218,12 +256,12 @@
             transform: translateY(1px);
         }
 
-        /* Hidden 2D CRT Screen Rendering Canvas used as Texture for 3D TV */
+        /* Hidden 2D CRT Screen Rendering Canvas */
         #crtTextureCanvas {
             display: none;
         }
 
-        /* Loading / Instructions HUD */
+        /* Instructions HUD */
         .hud-instructions {
             position: absolute;
             bottom: 20px;
@@ -243,13 +281,17 @@
 <body>
 
     <div id="webgl-container"></div>
-
-    <!-- Hidden 2D Canvas for generating dynamic CRT screen texture -->
     <canvas id="crtTextureCanvas" width="1024" height="768"></canvas>
 
     <div class="ui-layer">
+        <!-- Toggle Button to collapse/expand panel -->
+        <button class="toggle-panel-btn interactive" id="togglePanelBtn">
+            <span>⚙️ 設定面板</span>
+            <span id="toggleIcon">▲ 隱藏</span>
+        </button>
+
         <!-- Configuration Control Panel -->
-        <div class="config-panel interactive">
+        <div class="config-panel interactive" id="configPanel">
             <h2>電視訊息與畫面設定</h2>
             
             <div class="control-group">
@@ -300,7 +342,24 @@
     </div>
 
     <script>
-        // --- 1. Three.js Setup & GLB Loading ---
+        // --- Panel Toggle Feature ---
+        const togglePanelBtn = document.getElementById('togglePanelBtn');
+        const configPanel = document.getElementById('configPanel');
+        const toggleIcon = document.getElementById('toggleIcon');
+        let isPanelOpen = true;
+
+        togglePanelBtn.addEventListener('click', () => {
+            isPanelOpen = !isPanelOpen;
+            if (isPanelOpen) {
+                configPanel.classList.remove('collapsed');
+                toggleIcon.textContent = '▲ 隱藏';
+            } else {
+                configPanel.classList.add('collapsed');
+                toggleIcon.textContent = '▼ 展開';
+            }
+        });
+
+        // --- Three.js Setup & GLB Loading ---
         const container = document.getElementById('webgl-container');
         
         const scene = new THREE.Scene();
@@ -333,7 +392,7 @@
         pointLight.position.set(0, 0, 2);
         scene.add(pointLight);
 
-        // --- 2. Dynamic 2D CRT Screen Texture Generation ---
+        // --- Dynamic 2D CRT Screen Texture Generation ---
         const textCanvas = document.getElementById('crtTextureCanvas');
         const ctx = textCanvas.getContext('2d');
         const crtTexture = new THREE.CanvasTexture(textCanvas);
@@ -357,11 +416,10 @@
         textSizeRange.addEventListener('input', (e) => textSizeVal.textContent = sizeLabels[e.target.value]);
         scrollSpeedRange.addEventListener('input', (e) => scrollSpeedVal.textContent = speedLabels[e.target.value]);
 
-        // State Machine for CRT TV: 'off', 'noise', 'booting', 'running', 'powering_off'
         let tvState = 'noise';
         let textX = textCanvas.width;
         let noiseIntensity = 1.0;
-        let powerOffProgress = 0; // 0 to 1 for white horizontal collapse line
+        let powerOffProgress = 0;
 
         let config = {
             text: messageInput.value,
@@ -376,7 +434,6 @@
             const h = textCanvas.height;
             ctx.clearRect(0, 0, w, h);
 
-            // 1. CRT Background Glow & Color
             const bgGrad = ctx.createRadialGradient(w/2, h/2, 50, w/2, h/2, w * 0.7);
             if (tvState === 'off') {
                 ctx.fillStyle = '#050505';
@@ -390,7 +447,6 @@
             ctx.fillStyle = bgGrad;
             ctx.fillRect(0, 0, w, h);
 
-            // 2. Noise & Static Generation (before text appears or mixed in)
             if (tvState === 'noise' || tvState === 'booting' || noiseIntensity > 0.05) {
                 const imgData = ctx.getImageData(0, 0, w, h);
                 const data = imgData.data;
@@ -406,7 +462,6 @@
                 ctx.putImageData(imgData, 0, 0);
             }
 
-            // 3. Render Text if in running or booting phase
             if (tvState === 'running' || tvState === 'booting') {
                 let baseSize = 48;
                 if (config.size === 1) baseSize = 32;
@@ -455,16 +510,14 @@
                 }
             }
 
-            // 4. Scanlines Overlay
             ctx.shadowBlur = 0;
             ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
             for (let y = 0; y < h; y += 4) {
                 ctx.fillRect(0, y, w, 2);
             }
 
-            // 5. Power-off Animation Effect (Horizontal shrinking white line collapsing to center dot/line)
             if (tvState === 'powering_off') {
-                const p = powerOffProgress; // 0 to 1
+                const p = powerOffProgress;
                 if (p < 0.8) {
                     const heightFactor = Math.max(2, (1 - p / 0.8) * h);
                     ctx.fillStyle = 'rgba(0,0,0,0.85)';
@@ -491,7 +544,7 @@
             crtTexture.needsUpdate = true;
         }
 
-        // --- 3. Load GLB Model ---
+        // --- Load GLB Model ---
         let tvMesh = null;
         const loader = new THREE.GLTFLoader();
         
@@ -499,7 +552,6 @@
             'tv__old_tv__retro_tv.glb',
             function (gltf) {
                 tvMesh = gltf.scene;
-                
                 const box = new THREE.Box3().setFromObject(tvMesh);
                 const center = box.getCenter(new THREE.Vector3());
                 const size = box.getSize(new THREE.Vector3());
@@ -526,7 +578,7 @@
             },
             undefined,
             function (error) {
-                console.warn('Could not load tv__old_tv__retro_tv.glb directly. Creating procedural fallback TV model.', error);
+                console.warn('Could not load GLB, using fallback TV model.', error);
                 createFallbackTV();
             }
         );
@@ -545,7 +597,6 @@
 
         function createFallbackTV() {
             const group = new THREE.Group();
-            
             const cabinetGeo = new THREE.BoxGeometry(1.6, 1.2, 1.2);
             const cabinetMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.7 });
             const cabinet = new THREE.Mesh(cabinetGeo, cabinetMat);
@@ -561,7 +612,7 @@
             tvMesh = group;
         }
 
-        // --- 4. Animation Sequence Management ---
+        // --- Animation Sequences ---
         function startBootSequence() {
             config.text = messageInput.value;
             config.size = parseInt(textSizeRange.value);
@@ -613,7 +664,6 @@
 
         startBootSequence();
 
-        // --- 5. Main Render Loop ---
         function animate() {
             requestAnimationFrame(animate);
             controls.update();
